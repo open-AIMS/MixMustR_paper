@@ -1,0 +1,562 @@
+---
+title: "MixMustR: a data-integrative Bayesian approach to unravelling organic mixtures with latent source detection"
+format:
+  pdf:
+    keep-md: true
+    keep-tex: true
+    block-headings: false
+    documentclass: article
+    fontsize: 10pt
+    geometry: 
+      - top=0.5in
+      - left=0.5in
+      - bottom=0.5in
+      - right=0.5in
+      - footskip=0.75in
+    has-frontmatter: false
+    toc: false
+    lof: false
+    lot: false
+    colorlinks: false
+    biblio-style: plos2015
+    include-in-header: _preamble_supp.tex
+    # Using some package that may require pdflatex
+    pdf-engine: xelatex
+    # biblatex is not supported
+    cite-method: natbib
+    # number is required for plos2015.bst style
+    # and square,comma for correct guideline style
+    # https://tex.stackexchange.com/questions/376662/how-do-i-create-plosone-bib-references
+    natbiboptions: "numbers,square,comma"
+    # tcolorbox is not working ok with breakable for code blocks so deactivate this Quarto feature
+    # https://github.com/quarto-journals/article-format-template/issues/2
+    code-block-border-left: false
+editor: source
+author:
+  - name: Diego R Barneche
+    corresponding: true
+    email: d.barneche@aims.gov.au
+    affiliations:
+      - ref: aimswa
+      - ref: oiuwa
+  - name: Julie Vercelloni
+    email: j.vercelloni@aims.gov.au
+    affiliations:
+      - ref: aimsqld
+      - ref: qut
+  - name: Edgar Santos-Fernandez
+    email: edgar.santosfernandez@qut.edu.au
+    affiliations:
+      - ref: qut
+  - name: Kay L Davis
+    email: ka.davis@aims.gov.au
+    affiliations:
+      - ref: aimswa
+  - name: Shaun K Wilson
+    email: sk.wilson@aims.gov.au
+    affiliations:
+      - ref: aimswa
+      - ref: oiuwa
+  - name: Luke Thomas
+    email: l.thomas@aims.gov.au
+    affiliations:
+      - ref: aimswa
+      - ref: oiuwa
+  - name: James M McGree
+    email: james.mcgree@qut.edu.au
+    affiliations:
+      - ref: qut
+  - name: Kerrie Mengersen
+    email: k.mengersen@qut.edu.au
+    affiliations:
+      - ref: qut
+  - name: Christopher J Fulton
+    email: c.fulton@aims.gov.au
+    affiliations:
+      - ref: aimswa
+      - ref: oiuwa
+affiliations:
+  - id: aimswa
+    name: Australian Institute of Marine Science, Crawley, Western Australia 6009
+  - id: oiuwa
+    name: Oceans Institute, University of Western Australia, Crawley, Western Australia 6009
+  - id: aimsqld
+    name: Australian Institute of Marine Science, Cape Cleveland, Queensland 4810
+  - id: qut
+    name: Centre for Data Science, Queensland University of Technology, Brisbane, Queensland 4000
+bibliography: bibliography.bib
+---
+
+```{r}
+#| label: targets
+#| message: false
+#| echo: false
+knitr::opts_chunk$set(cache = FALSE, message = FALSE, warning = FALSE)
+# knitr::opts_knit$set(root.dir = "..")
+library(targets)
+library(tidyverse)
+library(rstan)
+library(MixSIAR)
+library(rjags)
+library(knitr)
+library(kableExtra)
+rstan::rstan_options(auto_write = TRUE)
+options(mc.cores = parallel::detectCores())
+targets::tar_load(
+  c(fig_s1, fig_s2, fig_s3, fig_s4, fig_s5, fig_s6, fig_s7, fig_s8,
+    fig_s9, fig_s10, fig_s11, fig_s12, fig_s13, fig_s14, fig_s15, fig_s16,
+    fig_s17, fig_s18, fig_s19, fig_s20, fig_s21, fig_s22, fig_s23, fig_s24,
+    fig_s26, fig_s27, fig_s28, tbl_s1, tbl_s2, jagsfits, model_choices,
+    mixmustr_models_c),
+  meta = targets::tar_meta(targets_only = TRUE, store = "_targets"),
+  store = "_targets"
+)
+```
+
+\bigskip \bigskip
+
+# Supplementary Information
+
+**Estimating the sampled source signatures.**
+
+Similarly to MixSIAR [@stock2018], MixMustR estimates the source signature for the $k^{\text{th}}$ tracer from the $j^{\text{th}}$ sampled source $\mu_{j, k}$, as well as its standard deviation, $\sqrt{\pi_{n, j}^2 \omega_{j, k}^2}$, based on the user-supplied mean, $x_{j, k}$, standard deviation, $s_{j, k}$, and sample size, $m_{j, k}$:
+
+$$
+  m_{j, k} \sim \chi^2(\nu_{j, k})
+$$
+$$
+  x_{j, k} \sim \mathcal{N}(\mu_{j, k}, \left(s_{j, k} / \sqrt{m_{j, k}}\right)^2)
+$$
+$$
+  \omega_{j, k} = \sqrt{(s_{j, k}^2 (m_{j, k} - 1)) / \nu_{j, k}}
+$$
+$$
+    \forall j = 1, \dots, J, \quad \forall k = 1, \dots, K.
+$$
+
+\newpage
+
+```{r}
+#| label: tbl-s1
+#| tbl-cap: "Tracer values (mean, standard deviation and sample size) associated with each sampled source from the published literature."
+#| include: true
+#| echo: false
+#| eval: true
+gt::gt(tbl_s1) |>
+  gt::fmt_markdown() |>
+  gt::as_raw_html()
+```
+
+\clearpage\newpage
+
+```{r}
+#| label: tbl-s2
+#| tbl-cap: !expr paste0("Chain-specific run time (minutes) for each model variant in MixMustR for both of the synthetic datasets. The total model run time for MixSIAR, including compilation, was ", round(jagsfits$timing[[3]] / 60), " minutes which is substantially faster when compared to the run time of first and ninth models below (closest possible comparisons) using MixMustR.")
+#| include: true
+#| echo: false
+#| eval: true
+kableExtra::kable(tbl_s2, format = "latex", booktabs = TRUE) |>
+  gsub("\\addlinespace", "", x = _, fixed = TRUE)
+```
+
+\clearpage\newpage
+
+```{r}
+#| label: fig-s1
+#| fig-cap: "**Mean posterior predictions vs. (simulated) mixing proportions in synthetic Dataset 1 of MixMustR, based on underlying mixing proportions for data stream 1.** Posterior predictions were obtained from the MixMustR model variants 2--4 all of which allow for hierarchical a structure. Variant 2: sampled sources' tracers are fixed at the user-informed mean, and unsampled source is calculated (fixed) as the mean across all sampled sources. Variant 3: sampled sources' tracers incorporate uncertainty, and unsampled source is estimated based on the uncertainty across all sampled sources. Variant 4: sampled sources' tracers are fixed at the user-informed mean, and unsampled source is estimated based on the uncertainty across all sampled sources. Colours and shapes represent the different models, and the dashed diagonal line represents the 1-to-1 reference: the closer the points are to the 1-to-1 line, the better the model fit."
+#| include: true
+#| echo: false
+#| eval: true
+#| fig.width: 7.2
+#| fig.height: 6.1
+#| out.width: 95%
+fig_s1
+```
+
+\clearpage\newpage
+
+```{r}
+#| label: fig-s2
+#| fig-cap: "**Mean posterior predictions vs. (simulated) mixing proportions in synthetic Dataset 1 of MixMustR, based on underlying mixing proportions for data stream 1.** Posterior predictions were obtained from the MixMustR model variants 5--8 all of which treat observations as independent, i.e., no hierarchical structure. Variant 5: sampled sources' tracers incorporate uncertainty, and unsampled source is estimated based on the uncertainty across all sampled sources. Variant 6: sampled sources' tracers are fixed at the user-informed mean, and unsampled source is calculated (fixed) as the mean across all sampled sources. Variant 7: sampled sources' tracers incorporate uncertainty, and unsampled source is estimated based on the uncertainty across all sampled sources. Variant 8: sampled sources' tracers are fixed at the user-informed mean, and unsampled source is estimated based on the uncertainty across all sampled sources. Colours and shapes represent the different models, and the dashed diagonal line represents the 1-to-1 reference: the closer the points are to the 1-to-1 line, the better the model fit."
+#| include: true
+#| echo: false
+#| eval: true
+#| fig.width: 7.2
+#| fig.height: 6.1
+#| out.width: 95%
+fig_s2
+```
+
+\clearpage\newpage
+
+```{r}
+#| label: fig-s3
+#| fig-cap: "**Mean posterior predictions vs. (simulated) mixing proportions in synthetic Dataset 1 of MixMustR, based on underlying mixing proportions for data stream 2.** Posterior predictions were obtained from the MixMustR model variants 2--4 all of which allow for hierarchical a structure. Variant 2: sampled sources' tracers are fixed at the user-informed mean, and unsampled source is calculated (fixed) as the mean across all sampled sources. Variant 3: sampled sources' tracers incorporate uncertainty, and unsampled source is estimated based on the uncertainty across all sampled sources. Variant 4: sampled sources' tracers are fixed at the user-informed mean, and unsampled source is estimated based on the uncertainty across all sampled sources. Colours and shapes represent the different models, and the dashed diagonal line represents the 1-to-1 reference: the closer the points are to the 1-to-1 line, the better the model fit."
+#| include: true
+#| echo: false
+#| eval: true
+#| fig.width: 7.2
+#| fig.height: 6.1
+#| out.width: 95%
+fig_s3
+```
+
+\clearpage\newpage
+
+```{r}
+#| label: fig-s4
+#| fig-cap: "**Mean posterior predictions vs. (simulated) mixing proportions in synthetic Dataset 1 of MixMustR, based on underlying mixing proportions for data stream 2.** Posterior predictions were obtained from the MixMustR model variants 5--8 all of which treat observations as independent, i.e., no hierarchical structure. Variant 5: sampled sources' tracers incorporate uncertainty, and unsampled source is estimated based on the uncertainty across all sampled sources. Variant 6: sampled sources' tracers are fixed at the user-informed mean, and unsampled source is calculated (fixed) as the mean across all sampled sources. Variant 7: sampled sources' tracers incorporate uncertainty, and unsampled source is estimated based on the uncertainty across all sampled sources. Variant 8: sampled sources' tracers are fixed at the user-informed mean, and unsampled source is estimated based on the uncertainty across all sampled sources. Colours and shapes represent the different models, and the dashed diagonal line represents the 1-to-1 reference: the closer the points are to the 1-to-1 line, the better the model fit."
+#| include: true
+#| echo: false
+#| eval: true
+#| fig.width: 7.2
+#| fig.height: 6.1
+#| out.width: 95%
+fig_s4
+```
+
+\clearpage\newpage
+
+```{r}
+#| label: fig-s5
+#| fig-cap: "**Mean posterior predictions vs. (simulated) mixing proportions in synthetic Dataset 2 of MixMustR, based on underlying mixing proportions for data stream 1.** Posterior predictions were obtained from the MixMustR model variants 2--4 all of which allow for hierarchical a structure. Variant 2: sampled sources' tracers are fixed at the user-informed mean, and unsampled source is calculated (fixed) as the mean across all sampled sources. Variant 3: sampled sources' tracers incorporate uncertainty, and unsampled source is estimated based on the uncertainty across all sampled sources. Variant 4: sampled sources' tracers are fixed at the user-informed mean, and unsampled source is estimated based on the uncertainty across all sampled sources. Colours and shapes represent the different models, and the dashed diagonal line represents the 1-to-1 reference: the closer the points are to the 1-to-1 line, the better the model fit."
+#| include: true
+#| echo: false
+#| eval: true
+#| fig.width: 7.2
+#| fig.height: 6.1
+#| out.width: 95%
+fig_s5
+```
+
+\clearpage\newpage
+
+```{r}
+#| label: fig-s6
+#| fig-cap: "**Mean posterior predictions vs. (simulated) mixing proportions in synthetic Dataset 2 of MixMustR, based on underlying mixing proportions for data stream 1.** Posterior predictions were obtained from the MixMustR model variants 5--8 all of which treat observations as independent, i.e., no hierarchical structure. Variant 5: sampled sources' tracers incorporate uncertainty, and unsampled source is estimated based on the uncertainty across all sampled sources. Variant 6: sampled sources' tracers are fixed at the user-informed mean, and unsampled source is calculated (fixed) as the mean across all sampled sources. Variant 7: sampled sources' tracers incorporate uncertainty, and unsampled source is estimated based on the uncertainty across all sampled sources. Variant 8: sampled sources' tracers are fixed at the user-informed mean, and unsampled source is estimated based on the uncertainty across all sampled sources. Colours and shapes represent the different models, and the dashed diagonal line represents the 1-to-1 reference: the closer the points are to the 1-to-1 line, the better the model fit."
+#| include: true
+#| echo: false
+#| eval: true
+#| fig.width: 7.2
+#| fig.height: 6.1
+#| out.width: 95%
+fig_s6
+```
+
+\clearpage\newpage
+
+```{r}
+#| label: fig-s7
+#| fig-cap: "**Mean posterior predictions vs. (simulated) mixing proportions in synthetic Dataset 2 of MixMustR, based on underlying mixing proportions for data stream 2.** Posterior predictions were obtained from the MixMustR model variants 2--4 all of which allow for hierarchical a structure. Variant 2: sampled sources' tracers are fixed at the user-informed mean, and unsampled source is calculated (fixed) as the mean across all sampled sources. Variant 3: sampled sources' tracers incorporate uncertainty, and unsampled source is estimated based on the uncertainty across all sampled sources. Variant 4: sampled sources' tracers are fixed at the user-informed mean, and unsampled source is estimated based on the uncertainty across all sampled sources. Colours and shapes represent the different models, and the dashed diagonal line represents the 1-to-1 reference: the closer the points are to the 1-to-1 line, the better the model fit."
+#| include: true
+#| echo: false
+#| eval: true
+#| fig.width: 7.2
+#| fig.height: 6.1
+#| out.width: 95%
+fig_s7
+```
+
+\clearpage\newpage
+
+```{r}
+#| label: fig-s8
+#| fig-cap: "**Mean posterior predictions vs. (simulated) mixing proportions in synthetic Dataset 2 of MixMustR, based on underlying mixing proportions for data stream 2.** Posterior predictions were obtained from the MixMustR model variants 5--8 all of which treat observations as independent, i.e., no hierarchical structure. Variant 5: sampled sources' tracers incorporate uncertainty, and unsampled source is estimated based on the uncertainty across all sampled sources. Variant 6: sampled sources' tracers are fixed at the user-informed mean, and unsampled source is calculated (fixed) as the mean across all sampled sources. Variant 7: sampled sources' tracers incorporate uncertainty, and unsampled source is estimated based on the uncertainty across all sampled sources. Variant 8: sampled sources' tracers are fixed at the user-informed mean, and unsampled source is estimated based on the uncertainty across all sampled sources. Colours and shapes represent the different models, and the dashed diagonal line represents the 1-to-1 reference: the closer the points are to the 1-to-1 line, the better the model fit."
+#| include: true
+#| echo: false
+#| eval: true
+#| fig.width: 7.2
+#| fig.height: 6.1
+#| out.width: 95%
+fig_s8
+```
+
+\clearpage\newpage
+
+```{r}
+#| label: fig-s9
+#| fig-cap: !expr paste0("**Convergence diagnostics of MixMustR model variant 1, fit to the synthetic dataset whose underlying mixing proportions of data streams 1 and 2 converge.** This model:", ifelse(MixMustR::mixmustr_models$sample_tracer[1], " estimates", " fixes"), " the signature of the tracers for each source (Fig. 1c in the main text); ", ifelse(MixMustR::mixmustr_models$fix_unsampled[1], "fixes", "estimates"), " the signature of the unsampled tracer (Fig. 1d in the main text); and ", ifelse(MixMustR::mixmustr_models$hierarchical[1], "imposes a hierarchical structure on the data ", "treats all observations as independent "), "(Fig. 1e in the main text). Top plots show the traceplots for each chain (colours) and estimated mixing proportion pooled across all observations, including the unsampled source. Middle plots show the posterior distribution for the same mixing proportions per chain (colours). Bottom plots show the distribution of effective sample sizes for the same mixing proportions as well as the Rhat statistic (at convergence Rhat = 1).")
+#| include: true
+#| echo: false
+#| eval: true
+#| fig.width: 8
+#| fig.height: 9.7
+#| out.width: 90%
+fig_s9
+```
+
+\clearpage\newpage
+
+```{r}
+#| label: fig-s10
+#| fig-cap: !expr paste0("**Convergence diagnostics of MixMustR model variant 2, fit to the synthetic dataset whose underlying mixing proportions of data streams 1 and 2 converge.** This model:", ifelse(MixMustR::mixmustr_models$sample_tracer[2], " estimates", " fixes"), " the signature of the tracers for each source (Fig. 1c in the main text); ", ifelse(MixMustR::mixmustr_models$fix_unsampled[2], "fixes", "estimates"), " the signature of the unsampled tracer (Fig. 1d in the main text); and ", ifelse(MixMustR::mixmustr_models$hierarchical[2], "imposes a hierarchical structure on the data ", "treats all observations as independent "), "(Fig. 1e in the main text). Top plots show the traceplots for each chain (colours) and estimated mixing proportion pooled across all observations, including the unsampled source. Middle plots show the posterior distribution for the same mixing proportions per chain (colours). Bottom plots show the distribution of effective sample sizes for the same mixing proportions as well as the Rhat statistic (at convergence Rhat = 1).")
+#| include: true
+#| echo: false
+#| eval: true
+#| fig.width: 8
+#| fig.height: 9.7
+#| out.width: 90%
+fig_s10
+```
+
+\clearpage\newpage
+
+```{r}
+#| label: fig-s11
+#| fig-cap: !expr paste0("**Convergence diagnostics of MixMustR model variant 3, fit to the synthetic dataset whose underlying mixing proportions of data streams 1 and 2 converge.** This model:", ifelse(MixMustR::mixmustr_models$sample_tracer[3], " estimates", " fixes"), " the signature of the tracers for each source (Fig. 1c in the main text); ", ifelse(MixMustR::mixmustr_models$fix_unsampled[3], "fixes", "estimates"), " the signature of the unsampled tracer (Fig. 1d in the main text); and ", ifelse(MixMustR::mixmustr_models$hierarchical[3], "imposes a hierarchical structure on the data ", "treats all observations as independent "), "(Fig. 1e in the main text). Top plots show the traceplots for each chain (colours) and estimated mixing proportion pooled across all observations, including the unsampled source. Middle plots show the posterior distribution for the same mixing proportions per chain (colours). Bottom plots show the distribution of effective sample sizes for the same mixing proportions as well as the Rhat statistic (at convergence Rhat = 1).")
+#| include: true
+#| echo: false
+#| eval: true
+#| fig.width: 8
+#| fig.height: 9.7
+#| out.width: 90%
+fig_s11
+```
+
+\clearpage\newpage
+
+```{r}
+#| label: fig-s12
+#| fig-cap: !expr paste0("**Convergence diagnostics of MixMustR model variant 4, fit to the synthetic dataset whose underlying mixing proportions of data streams 1 and 2 converge.** This model:", ifelse(MixMustR::mixmustr_models$sample_tracer[4], " estimates", " fixes"), " the signature of the tracers for each source (Fig. 1c in the main text); ", ifelse(MixMustR::mixmustr_models$fix_unsampled[4], "fixes", "estimates"), " the signature of the unsampled tracer (Fig. 1d in the main text); and ", ifelse(MixMustR::mixmustr_models$hierarchical[4], "imposes a hierarchical structure on the data ", "treats all observations as independent "), "(Fig. 1e in the main text). Top plots show the traceplots for each chain (colours) and estimated mixing proportion pooled across all observations, including the unsampled source. Middle plots show the posterior distribution for the same mixing proportions per chain (colours). Bottom plots show the distribution of effective sample sizes for the same mixing proportions as well as the Rhat statistic (at convergence Rhat = 1).")
+#| include: true
+#| echo: false
+#| eval: true
+#| fig.width: 8
+#| fig.height: 9.7
+#| out.width: 90%
+fig_s12
+```
+
+\clearpage\newpage
+
+```{r}
+#| label: fig-s13
+#| fig-cap: !expr paste0("**Convergence diagnostics of MixMustR model variant 5, fit to the synthetic dataset whose underlying mixing proportions of data streams 1 and 2 converge.** This model:", ifelse(MixMustR::mixmustr_models$sample_tracer[5], " estimates", " fixes"), " the signature of the tracers for each source (Fig. 1c in the main text); ", ifelse(MixMustR::mixmustr_models$fix_unsampled[5], "fixes", "estimates"), " the signature of the unsampled tracer (Fig. 1d in the main text); and ", ifelse(MixMustR::mixmustr_models$hierarchical[5], "imposes a hierarchical structure on the data ", "treats all observations as independent "), "(Fig. 1e in the main text). Top plots show the traceplots for each chain (colours) and estimated mixing proportion pooled across all observations, including the unsampled source. Middle plots show the posterior distribution for the same mixing proportions per chain (colours). Bottom plots show the distribution of effective sample sizes for the same mixing proportions as well as the Rhat statistic (at convergence Rhat = 1).")
+#| include: true
+#| echo: false
+#| eval: true
+#| fig.width: 8
+#| fig.height: 9.7
+#| out.width: 90%
+fig_s13
+```
+
+\clearpage\newpage
+
+```{r}
+#| label: fig-s14
+#| fig-cap: !expr paste0("**Convergence diagnostics of MixMustR model variant 6, fit to the synthetic dataset whose underlying mixing proportions of data streams 1 and 2 converge.** This model:", ifelse(MixMustR::mixmustr_models$sample_tracer[6], " estimates", " fixes"), " the signature of the tracers for each source (Fig. 1c in the main text); ", ifelse(MixMustR::mixmustr_models$fix_unsampled[6], "fixes", "estimates"), " the signature of the unsampled tracer (Fig. 1d in the main text); and ", ifelse(MixMustR::mixmustr_models$hierarchical[6], "imposes a hierarchical structure on the data ", "treats all observations as independent "), "(Fig. 1e in the main text). Top plots show the traceplots for each chain (colours) and estimated mixing proportion pooled across all observations, including the unsampled source. Middle plots show the posterior distribution for the same mixing proportions per chain (colours). Bottom plots show the distribution of effective sample sizes for the same mixing proportions as well as the Rhat statistic (at convergence Rhat = 1).")
+#| include: true
+#| echo: false
+#| eval: true
+#| fig.width: 8
+#| fig.height: 9.7
+#| out.width: 90%
+fig_s14
+```
+
+\clearpage\newpage
+
+```{r}
+#| label: fig-s15
+#| fig-cap: !expr paste0("**Convergence diagnostics of MixMustR model variant 7, fit to the synthetic dataset whose underlying mixing proportions of data streams 1 and 2 converge.** This model:", ifelse(MixMustR::mixmustr_models$sample_tracer[7], " estimates", " fixes"), " the signature of the tracers for each source (Fig. 1c in the main text); ", ifelse(MixMustR::mixmustr_models$fix_unsampled[7], "fixes", "estimates"), " the signature of the unsampled tracer (Fig. 1d in the main text); and ", ifelse(MixMustR::mixmustr_models$hierarchical[7], "imposes a hierarchical structure on the data ", "treats all observations as independent "), "(Fig. 1e in the main text). Top plots show the traceplots for each chain (colours) and estimated mixing proportion pooled across all observations, including the unsampled source. Middle plots show the posterior distribution for the same mixing proportions per chain (colours). Bottom plots show the distribution of effective sample sizes for the same mixing proportions as well as the Rhat statistic (at convergence Rhat = 1).")
+#| include: true
+#| echo: false
+#| eval: true
+#| fig.width: 8
+#| fig.height: 9.7
+#| out.width: 90%
+fig_s15
+```
+
+\clearpage\newpage
+
+```{r}
+#| label: fig-s16
+#| fig-cap: !expr paste0("**Convergence diagnostics of MixMustR model variant 8, fit to the synthetic dataset whose underlying mixing proportions of data streams 1 and 2 converge.** This model:", ifelse(MixMustR::mixmustr_models$sample_tracer[8], " estimates", " fixes"), " the signature of the tracers for each source (Fig. 1c in the main text); ", ifelse(MixMustR::mixmustr_models$fix_unsampled[8], "fixes", "estimates"), " the signature of the unsampled tracer (Fig. 1d in the main text); and ", ifelse(MixMustR::mixmustr_models$hierarchical[8], "imposes a hierarchical structure on the data ", "treats all observations as independent "), "(Fig. 1e in the main text). Top plots show the traceplots for each chain (colours) and estimated mixing proportion pooled across all observations, including the unsampled source. Middle plots show the posterior distribution for the same mixing proportions per chain (colours). Bottom plots show the distribution of effective sample sizes for the same mixing proportions as well as the Rhat statistic (at convergence Rhat = 1).")
+#| include: true
+#| echo: false
+#| eval: true
+#| fig.width: 8
+#| fig.height: 9.7
+#| out.width: 90%
+fig_s16
+```
+
+\clearpage\newpage
+
+```{r}
+#| label: fig-s17
+#| fig-cap: !expr paste0("**Convergence diagnostics of MixMustR model variant 1, fit to the synthetic dataset whose underlying mixing proportions of data streams 1 and 2 diverge.** This model:", ifelse(MixMustR::mixmustr_models$sample_tracer[1], " estimates", " fixes"), " the signature of the tracers for each source (Fig. 1c in the main text); ", ifelse(MixMustR::mixmustr_models$fix_unsampled[1], "fixes", "estimates"), " the signature of the unsampled tracer (Fig. 1d in the main text); and ", ifelse(MixMustR::mixmustr_models$hierarchical[1], "imposes a hierarchical structure on the data ", "treats all observations as independent "), "(Fig. 1e in the main text). Top plots show the traceplots for each chain (colours) and estimated mixing proportion pooled across all observations, including the unsampled source. Middle plots show the posterior distribution for the same mixing proportions per chain (colours). Bottom plots show the distribution of effective sample sizes for the same mixing proportions as well as the Rhat statistic (at convergence Rhat = 1).")
+#| include: true
+#| echo: false
+#| eval: true
+#| fig.width: 8
+#| fig.height: 9.7
+#| out.width: 90%
+fig_s17
+```
+
+\clearpage\newpage
+
+```{r}
+#| label: fig-s18
+#| fig-cap: !expr paste0("**Convergence diagnostics of MixMustR model variant 2, fit to the synthetic dataset whose underlying mixing proportions of data streams 1 and 2 diverge.** This model:", ifelse(MixMustR::mixmustr_models$sample_tracer[2], " estimates", " fixes"), " the signature of the tracers for each source (Fig. 1c in the main text); ", ifelse(MixMustR::mixmustr_models$fix_unsampled[2], "fixes", "estimates"), " the signature of the unsampled tracer (Fig. 1d in the main text); and ", ifelse(MixMustR::mixmustr_models$hierarchical[2], "imposes a hierarchical structure on the data ", "treats all observations as independent "), "(Fig. 1e in the main text). Top plots show the traceplots for each chain (colours) and estimated mixing proportion pooled across all observations, including the unsampled source. Middle plots show the posterior distribution for the same mixing proportions per chain (colours). Bottom plots show the distribution of effective sample sizes for the same mixing proportions as well as the Rhat statistic (at convergence Rhat = 1).")
+#| include: true
+#| echo: false
+#| eval: true
+#| fig.width: 8
+#| fig.height: 9.7
+#| out.width: 90%
+fig_s18
+```
+
+\clearpage\newpage
+
+```{r}
+#| label: fig-s19
+#| fig-cap: !expr paste0("**Convergence diagnostics of MixMustR model variant 3, fit to the synthetic dataset whose underlying mixing proportions of data streams 1 and 2 diverge.** This model:", ifelse(MixMustR::mixmustr_models$sample_tracer[3], " estimates", " fixes"), " the signature of the tracers for each source (Fig. 1c in the main text); ", ifelse(MixMustR::mixmustr_models$fix_unsampled[3], "fixes", "estimates"), " the signature of the unsampled tracer (Fig. 1d in the main text); and ", ifelse(MixMustR::mixmustr_models$hierarchical[3], "imposes a hierarchical structure on the data ", "treats all observations as independent "), "(Fig. 1e in the main text). Top plots show the traceplots for each chain (colours) and estimated mixing proportion pooled across all observations, including the unsampled source. Middle plots show the posterior distribution for the same mixing proportions per chain (colours). Bottom plots show the distribution of effective sample sizes for the same mixing proportions as well as the Rhat statistic (at convergence Rhat = 1).")
+#| include: true
+#| echo: false
+#| eval: true
+#| fig.width: 8
+#| fig.height: 9.7
+#| out.width: 90%
+fig_s19
+```
+
+\clearpage\newpage
+
+```{r}
+#| label: fig-s20
+#| fig-cap: !expr paste0("**Convergence diagnostics of MixMustR model variant 4, fit to the synthetic dataset whose underlying mixing proportions of data streams 1 and 2 diverge.** This model:", ifelse(MixMustR::mixmustr_models$sample_tracer[4], " estimates", " fixes"), " the signature of the tracers for each source (Fig. 1c in the main text); ", ifelse(MixMustR::mixmustr_models$fix_unsampled[4], "fixes", "estimates"), " the signature of the unsampled tracer (Fig. 1d in the main text); and ", ifelse(MixMustR::mixmustr_models$hierarchical[4], "imposes a hierarchical structure on the data ", "treats all observations as independent "), "(Fig. 1e in the main text). Top plots show the traceplots for each chain (colours) and estimated mixing proportion pooled across all observations, including the unsampled source. Middle plots show the posterior distribution for the same mixing proportions per chain (colours). Bottom plots show the distribution of effective sample sizes for the same mixing proportions as well as the Rhat statistic (at convergence Rhat = 1).")
+#| include: true
+#| echo: false
+#| eval: true
+#| fig.width: 8
+#| fig.height: 9.7
+#| out.width: 90%
+fig_s20
+```
+
+\clearpage\newpage
+
+```{r}
+#| label: fig-s21
+#| fig-cap: !expr paste0("**Convergence diagnostics of MixMustR model variant 5, fit to the synthetic dataset whose underlying mixing proportions of data streams 1 and 2 diverge.** This model:", ifelse(MixMustR::mixmustr_models$sample_tracer[5], " estimates", " fixes"), " the signature of the tracers for each source (Fig. 1c in the main text); ", ifelse(MixMustR::mixmustr_models$fix_unsampled[5], "fixes", "estimates"), " the signature of the unsampled tracer (Fig. 1d in the main text); and ", ifelse(MixMustR::mixmustr_models$hierarchical[5], "imposes a hierarchical structure on the data ", "treats all observations as independent "), "(Fig. 1e in the main text). Top plots show the traceplots for each chain (colours) and estimated mixing proportion pooled across all observations, including the unsampled source. Middle plots show the posterior distribution for the same mixing proportions per chain (colours). Bottom plots show the distribution of effective sample sizes for the same mixing proportions as well as the Rhat statistic (at convergence Rhat = 1).")
+#| include: true
+#| echo: false
+#| eval: true
+#| fig.width: 8
+#| fig.height: 9.7
+#| out.width: 90%
+fig_s21
+```
+
+\clearpage\newpage
+
+```{r}
+#| label: fig-s22
+#| fig-cap: !expr paste0("**Convergence diagnostics of MixMustR model variant 6, fit to the synthetic dataset whose underlying mixing proportions of data streams 1 and 2 diverge.** This model:", ifelse(MixMustR::mixmustr_models$sample_tracer[6], " estimates", " fixes"), " the signature of the tracers for each source (Fig. 1c in the main text); ", ifelse(MixMustR::mixmustr_models$fix_unsampled[6], "fixes", "estimates"), " the signature of the unsampled tracer (Fig. 1d in the main text); and ", ifelse(MixMustR::mixmustr_models$hierarchical[6], "imposes a hierarchical structure on the data ", "treats all observations as independent "), "(Fig. 1e in the main text). Top plots show the traceplots for each chain (colours) and estimated mixing proportion pooled across all observations, including the unsampled source. Middle plots show the posterior distribution for the same mixing proportions per chain (colours). Bottom plots show the distribution of effective sample sizes for the same mixing proportions as well as the Rhat statistic (at convergence Rhat = 1).")
+#| include: true
+#| echo: false
+#| eval: true
+#| fig.width: 8
+#| fig.height: 9.7
+#| out.width: 90%
+fig_s22
+```
+
+\clearpage\newpage
+
+```{r}
+#| label: fig-s23
+#| fig-cap: !expr paste0("**Convergence diagnostics of MixMustR model variant 7, fit to the synthetic dataset whose underlying mixing proportions of data streams 1 and 2 diverge.** This model:", ifelse(MixMustR::mixmustr_models$sample_tracer[7], " estimates", " fixes"), " the signature of the tracers for each source (Fig. 1c in the main text); ", ifelse(MixMustR::mixmustr_models$fix_unsampled[7], "fixes", "estimates"), " the signature of the unsampled tracer (Fig. 1d in the main text); and ", ifelse(MixMustR::mixmustr_models$hierarchical[7], "imposes a hierarchical structure on the data ", "treats all observations as independent "), "(Fig. 1e in the main text). Top plots show the traceplots for each chain (colours) and estimated mixing proportion pooled across all observations, including the unsampled source. Middle plots show the posterior distribution for the same mixing proportions per chain (colours). Bottom plots show the distribution of effective sample sizes for the same mixing proportions as well as the Rhat statistic (at convergence Rhat = 1).")
+#| include: true
+#| echo: false
+#| eval: true
+#| fig.width: 8
+#| fig.height: 9.7
+#| out.width: 90%
+fig_s23
+```
+
+\clearpage\newpage
+
+```{r}
+#| label: fig-s24
+#| fig-cap: !expr paste0("**Convergence diagnostics of MixMustR model variant 8, fit to the synthetic dataset whose underlying mixing proportions of data streams 1 and 2 diverge.** This model:", ifelse(MixMustR::mixmustr_models$sample_tracer[8], " estimates", " fixes"), " the signature of the tracers for each source (Fig. 1c in the main text); ", ifelse(MixMustR::mixmustr_models$fix_unsampled[8], "fixes", "estimates"), " the signature of the unsampled tracer (Fig. 1d in the main text); and ", ifelse(MixMustR::mixmustr_models$hierarchical[8], "imposes a hierarchical structure on the data ", "treats all observations as independent "), "(Fig. 1e in the main text). Top plots show the traceplots for each chain (colours) and estimated mixing proportion pooled across all observations, including the unsampled source. Middle plots show the posterior distribution for the same mixing proportions per chain (colours). Bottom plots show the distribution of effective sample sizes for the same mixing proportions as well as the Rhat statistic (at convergence Rhat = 1).")
+#| include: true
+#| echo: false
+#| eval: true
+#| fig.width: 8
+#| fig.height: 9.7
+#| out.width: 90%
+fig_s24
+```
+
+\clearpage\newpage
+
+\begin{figure}
+  \centering{\includegraphics[width=0.9\linewidth,height=\textheight,keepaspectratio]{../diagram/edna.png}}
+  \caption{\label{fig-25}\textbf{Overview of the environmental DNA (eDNA) metabarcoding analytical pipeline.} The workflow highlights the key stages from field sampling through to community composition and input into MixMustR's mixture models.}
+\end{figure}
+
+\clearpage\newpage
+
+# $\text{ln}\rho_{n, j}$ and $\sigma_{\text{ln}\rho_{n, j}}$ as priors
+
+Here we consider the alternative parametrisation case in which $\text{ln}\rho_{n, j}$ and $\sigma_{\text{ln}\rho_{n, j}}$ are treated as prior information for $\zeta_{n,j}$. We do this for model variant 6 which is the simplest model in MixMustR: sampled sources' tracers are fixed at the user-informed mean, the unsampled source is calculated (fixed) as the mean across all sampled sources, and every observation is treated as independent:
+
+$$
+\zeta_{n,j} \sim \mathcal{N}\left(\text{ln}\rho_{n, j}, \sigma_{\text{ln}\rho_{n, j}}^2\right).
+$$
+$$
+\forall n = 1, \dots, N, \quad \forall j = 1, \dots, J + 1, \quad \forall k = 1, \dots, K.
+$$
+
+\noindent We fit this alternative parametrisation to Dataset 2 (divergent), and also set $\sigma_{\text{ln}\rho_{n, j}}$ = 1 (high uncertainty). Results and convergence diagnostics can be seen in @fig-s26, @fig-s27 and @fig-s28.
+
+\clearpage\newpage
+
+```{r}
+#| label: fig-s26
+#| fig-cap: "**Mean posterior predictions vs. (simulated) mixing proportions in synthetic Dataset 2 of MixMustR, based on underlying mixing proportions for data stream 1.** Posterior predictions were obtained from the MixMustR model variant 6. The dashed diagonal line represents the 1-to-1 reference: the closer the points are to the 1-to-1 line, the better the model fit."
+#| include: true
+#| echo: false
+#| eval: true
+#| fig.width: 7.2
+#| fig.height: 6.1
+#| out.width: 95%
+fig_s26
+```
+
+\clearpage\newpage
+
+```{r}
+#| label: fig-s27
+#| fig-cap: "**Mean posterior predictions vs. (simulated) mixing proportions in synthetic Dataset 2 of MixMustR, based on underlying mixing proportions for data stream 2.** Posterior predictions were obtained from the MixMustR model variant 6. The dashed diagonal line represents the 1-to-1 reference: the closer the points are to the 1-to-1 line, the better the model fit."
+#| include: true
+#| echo: false
+#| eval: true
+#| fig.width: 7.2
+#| fig.height: 6.1
+#| out.width: 95%
+fig_s27
+```
+
+\clearpage\newpage
+
+```{r}
+#| label: fig-s28
+#| fig-cap: !expr paste0("**Convergence diagnostics of MixMustR model variant 6, fit to the synthetic dataset whose underlying mixing proportions of data streams 1 and 2 diverge.** This model:", ifelse(MixMustR::mixmustr_models$sample_tracer[6], " estimates", " fixes"), " the signature of the tracers for each source (Fig. 1c in the main text); ", ifelse(MixMustR::mixmustr_models$fix_unsampled[6], "fixes", "estimates"), " the signature of the unsampled tracer (Fig. 1d in the main text); and ", ifelse(MixMustR::mixmustr_models$hierarchical[6], "imposes a hierarchical structure on the data ", "treats all observations as independent "), "(Fig. 1e in the main text). Top plots show the traceplots for each chain (colours) and estimated mixing proportion pooled across all observations, including the unsampled source. Middle plots show the posterior distribution for the same mixing proportions per chain (colours). Bottom plots show the distribution of effective sample sizes for the same mixing proportions as well as the Rhat statistic (at convergence Rhat = 1).")
+#| include: true
+#| echo: false
+#| eval: true
+#| fig.width: 8
+#| fig.height: 9.7
+#| out.width: 90%
+fig_s28
+```
+
+\clearpage\newpage
