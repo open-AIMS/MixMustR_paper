@@ -70,7 +70,7 @@ targets::tar_load(c(fig_2, fig_3, fig_4, fig_5, fig_6),
 
 \noindent \textbf{Word Count:} 3,232 (main text), 3,500 (Methods), 161 (Abstract)
 
-\noindent \textbf{Number of references:} 46; \textbf{Number of figures:} 6; \textbf{Number of tables:} 2
+\noindent \textbf{Number of references:} 45; \textbf{Number of figures:} 6; \textbf{Number of tables:} 2
 
 \noindent \textbf{\*Correspondence should be sent to:} Diego R. Barneche, Australian Institute of Marine Science, Crawley, Western Australia, 6009, Australia (Tel: +61 (8) 6369 4008; Email: d.barneche@aims.gov.au).
 
