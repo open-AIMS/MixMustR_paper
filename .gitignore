@@ -6,10 +6,22 @@ ignore/
 docs/*
 !docs/*.qmd
 !docs/bibliography.bib
-!docs/_extensions/
 !docs/logo.png
 !docs/_preamble_supp.tex
 !docs/plos2015.bst
+!docs/template.tex
+!docs/citation.csl
+
+# HPC: read-only code + pre-computed outputs consumed by the targets pipeline
+hpc/*
+!hpc/Dockerfile
+!hpc/make_hpc_pack_and_jobs.R
+!hpc/run_csv_array_dev.sbatch
+!hpc/worker_dev.R
+!hpc/jobs_dev.csv
+!hpc/diagnostics_rds/
+hpc/diagnostics_rds/*
+!hpc/diagnostics_rds/diag_model_*.rds
 
 *.pdf
 *.zip
@@ -20,9 +32,6 @@ Rplot.pdf
 *.RData
 *tmp*
 TODO.*md
-
-stan/*
-!stan/sample_tracer_FALSE_fix_unsampled_TRUE_hierarchical_FALSE_ln_rho_as_prior.stan
 
 diagram/*
 !diagram/diagram.png

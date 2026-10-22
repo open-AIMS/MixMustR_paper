@@ -27,25 +27,24 @@ csl: citation.csl
 ```{r}
 #| label: targets
 #| message: false
+#| warning: false
 #| echo: false
 knitr::opts_chunk$set(cache = FALSE, message = FALSE, warning = FALSE)
 # knitr::opts_knit$set(root.dir = "..")
 library(targets)
 library(tidyverse)
 library(rstan)
-library(MixSIAR)
-library(rjags)
 library(knitr)
 library(kableExtra)
 rstan::rstan_options(auto_write = TRUE)
 options(mc.cores = parallel::detectCores())
-targets::tar_load(c(fig_2, fig_3, fig_4, fig_5, fig_6, tbl_1, jagsfits),
+targets::tar_load(c(fig_2, fig_3, fig_4, fig_5, fig_6),
   meta = targets::tar_meta(targets_only = TRUE, store = "_targets"),
   store = "_targets"
 )
 ```
 
-# MixMustR: a data-integrative Bayesian approach to unravelling organic mixtures with latent source detection
+# MixMustR: a data-integrative Bayesian approach to tracer-based ecological mixing problems with an unsampled-source component
 
 \noindent Diego R Barneche^1,2,\*^, Julie Vercelloni^3,4^, Edgar Santos-Fernández^4^, Kay L Davis^1^, Shaun K Wilson^1,2^, Luke Thomas^1,2^, James M McGree^4^, Kerrie Mengersen^4^, Christopher J Fulton^1,2^
 
@@ -61,17 +60,17 @@ targets::tar_load(c(fig_2, fig_3, fig_4, fig_5, fig_6, tbl_1, jagsfits),
 \doublespace \fontsize{12}{14}\selectfont
 \setlength{\parindent}{15pt}
 
-\noindent \textbf{Statement of authorship:} D.R.B., J.V., E.S.F., K.L.D., J.M.M., K.M. and C.J.F. conceived the initial idea; D.R.B., K.L.D., S.K.W. and C.J.F. compiled and curated data; D.R.B. and C.J.F. conducted formal analysis; D.R.B. and E.S.F. wrote the first set of Bayesian models; D.R.B. formalised the R package; D.R.B. and C.J.F. wrote the first draft; C.J.F. administered the funding; All authors contributed to substantial revisions.
+\noindent \textbf{Statement of authorship:} D.R.B., J.V., E.S.F., K.L.D., J.M.M., K.M. and C.J.F. conceived the initial idea; D.R.B., K.L.D., S.K.W. and C.J.F. compiled and curated data; D.R.B. and C.J.F. conducted formal analysis; D.R.B., E.S.F. and K.M. wrote the first set of Bayesian models; D.R.B. formalised the R package; D.R.B. and C.J.F. wrote the first draft; C.J.F. and K.L.D. administered the funding; All authors contributed to substantial revisions.
 
 \noindent \textbf{Data accessibility statement:} The MixMustR package is publicly available via a GitHub repository [https://github.com/open-AIMS/MixMustR](https://github.com/open-AIMS/MixMustR).
 
-\noindent \textbf{Running title:} MixMustR: a data-integrative Bayesian mixture modelling R package
+\noindent \textbf{Running title:} MixMustR: a data-integrative Bayesian mixing modelling R package
 
-\noindent \textbf{Keywords:} mixture models, Bayesian, stable isotopes, fatty acids, eDNA, blue carbon
+\noindent \textbf{Keywords:} ecological mixing models, Bayesian, stable isotopes, fatty acids, eDNA, blue carbon
 
-\noindent \textbf{Word Count:} 4,891 (main text), 150 (Abstract)
+\noindent \textbf{Word Count:} 3,232 (main text), 3,500 (Methods), 161 (Abstract)
 
-\noindent \textbf{Number of references:} 35; \textbf{Number of figures:} 6; \textbf{Number of tables:} 1
+\noindent \textbf{Number of references:} 46; \textbf{Number of figures:} 6; \textbf{Number of tables:} 2
 
 \noindent \textbf{\*Correspondence should be sent to:} Diego R. Barneche, Australian Institute of Marine Science, Crawley, Western Australia, 6009, Australia (Tel: +61 (8) 6369 4008; Email: d.barneche@aims.gov.au).
 
@@ -79,161 +78,813 @@ targets::tar_load(c(fig_2, fig_3, fig_4, fig_5, fig_6, tbl_1, jagsfits),
 
 # Abstract
 
-\noindent MixMustR is a novel Bayesian mixture model package designed to estimate source mixing proportions in complex ecological systems. Traditional mixture models, often limited by the number of tracers and predefined sources, struggle with infinite solutions and possibly unsampled sources. MixMustR addresses these challenges by leveraging two independent data streams: chemical tracers (e.g., stable isotopes, fatty acids) and source composition data (e.g., from environmental DNA metabarcoding). Written in R and utilising the Stan language for probabilistic programming, MixMustR incorporates uncertainty in input data and allows for the estimation of an additional unsampled source component. The package offers eight model variants, enabling flexibility in error structures, unsampled source estimation, and hierarchical grouping. Performance testing with synthetic datasets demonstrates MixMustR's ability to recover original mixing proportions. MixMustR has broad applicability in ecological research, particularly in studies integrating multiple tracers to unravel source-sink dynamics and trophic interactions. A full tutorial is available on GitHub.
+\noindent MixMustR is an R package providing multiple Bayesian mixing models written in Stan, designed to estimate source mixing proportions in complex ecological systems. Traditional ecological mixing models, often limited by the number of tracers and predefined sources, can struggle with infinite solutions and possibly unsampled sources. MixMustR addresses these challenges by leveraging two conditionally independent likelihood contributions linked by shared latent source proportions: chemical tracers or biomarkers (e.g., stable isotopes, fatty acids) and source composition data (e.g., particle tracking outputs, environment DNA metabarcoding). The package implements eight variants defined by whether sampled-source signatures are fixed or estimated, whether a pooled unsampled-source signature is fixed or estimated, and whether latent compositions are independent or hierarchically structured. A factorial simulation experiment based on real-world tracer values and using multiple model performance diagnostics demonstrates that across the simulated conditions, most variants recovered the tracer-generating compositions with relatively low median error, although performance varied by stream agreement, model structure and source identity. MixMustR has applicability in ecological research that integrates multiple data streams to unravel source-sink dynamics and trophic interactions. A full tutorial is available on GitHub.
 
 # Introduction
 
-\noindent Mixture or mixing models (used synonymously in this paper) provide a flexible statistical framework for analysing complex datasets in which observations arise from multiple underlying sources or groups with distinct characteristics [@robert1999; @mclachlan2019anrevstat]. Mixture models have been widely applied to identify the contribution of different sources to mixtures, such as in trophic ecology where the goal is to estimate the dietary contributions of different food sources to consumer tissues [@phillips2012jmamm; @phillips2014canzoo; @stock2018]. Estimating the sources of organic carbon within soil samples has also seen an application of increasingly complex mixture models to identify the major drivers of carbon sequestration in terrestrial and aquatic ecosystems (e.g., refs. [@reef2017aslo; @ortega2020aslo; @erlania2023scitot; @erlania2024ecolind]). These mixture models typically rely on chemical tracers (often stable isotopes $\delta$^13^C and $\delta$^15^N, and/or total C:N) from plant sources that capture carbon through photosynthesis.
+\noindent Ecological mixing models provide a statistical framework for estimating the proportional contributions of candidate sources to an observed mixture [@phillips2001; @phillips2003; @moore2008; @parnell2010; @phillips2012jmamm; @phillips2014canzoo; @stock2018]. These models have been widely applied in trophic ecology and blue carbon studies (the focus of our study) which rely on biogeochemical tracers and markers, including stable isotopes $\delta^{13}\mathrm{C}$ and $\delta^{15}\mathrm{N}$, elemental ratios such as C:N, and fatty acids profiles to unpack the contribution of different sources to mixtures. For example, using stable isotope data, multiple studies have estimated the dietary contributions of different food sources to consumer tissues [@phillips2012jmamm; @phillips2014canzoo; @stock2018]. Similarly, identifying the sources, transport pathways and deposition of organic carbon in soils and sediments can improve understanding of carbon accumulation and potential sequestration in terrestrial and aquatic ecosystems [@reef2017aslo; @ortega2020aslo; @erlania2023scitot].
 
-Traditional approaches to solving the mixture problem used linear models to estimate proportions for two sources using a single stable isotope (typically $\delta$^13^C) with the assumption of no variability within sources [@phillips2001]. This approach was later extended in the "IsoError" model to include variability within sources [@phillips2001]. However, only a limited number of sources can be considered in these models because they cannot deterministically solve mass-balance equations when the number of sources exceeds the number of tracers plus one. However, complex ecological systems often have many more sources than the number of available tracers within a particular tracer group (e.g., stable isotopes). For example, in a diverse landscape, there may be dozens of potential autotrophic sources contributing to the organic carbon buried within a soil sink. Early attempts to solve this "underdetermined" problem of the unsampled sources involved an iterative algorithm to produce a range of feasible solutions based on investigator-defined thresholds (e.g., IsoSource [@phillips2003; @parnell2010]), though these did not provide any quantification as to which solutions were most likely.
+Traditional approaches to solving the mixture problem used linear models to estimate proportions for two sources using a single stable isotope (typically $\delta^{13}\mathrm{C}$) with the assumption of no variability within sources [@phillips2001]. This approach was analytically extended in the "IsoError" model to propagate source and mixture variability [@phillips2001]. However, only a limited number of sources can be considered in these models because they cannot deterministically solve mass-balance equations when the number of sources exceeds the number of tracers plus one. Complex ecological systems often have many more sources than the number of available tracers within a particular tracer group (e.g., stable isotopes). For example, in a diverse landscape, there may be dozens of potential autotrophic sources contributing to the organic carbon buried within a soil sink. Early attempts to solve this "underdetermined" problem of the multiple sampled sources relative to the number of tracers involved a systematic enumeration procedure to produce a range of feasible solutions based on investigator-defined thresholds (e.g., IsoSource [@phillips2003]), though these described the set and distribution of feasible solutions but did not assign posterior probabilities to them.
 
-More recently, Bayesian mixture models have allowed for the incorporation of uncertainty in input data at different levels and the estimation of uncertainty of source mixing proportions [@moore2008; @parnell2010; @parnell2013; @neubauer2013; @neubauer2015; @stock2018]. Early models such as MixSIR introduced Bayesian inference into isotope mixture models [@moore2008], and were later refined by SIAR (Stable Isotope Analysis in R [@parnell2010]) to handle larger datasets and additional uncertainty parameters. MixSIAR further expanded these capabilities by incorporating covariates and hierarchical structures [@stock2018], making it adaptable to complex ecological systems. More recent advancements, such as the two-trophic-level MixSIAR [@heikkinen2022], extend the framework to account for multiple trophic steps, thereby improving the depth of ecological inference by better capturing some structural complexity of food webs. While these models differ in computational complexity and assumptions, they collectively advanced the application of mixture models in ecological research and provide increasingly reliable insights into ecosystem source-sink dynamics.
+More recently, Bayesian mixing models have allowed for the incorporation of uncertainty in input data at different levels and the estimation of uncertainty of source mixing proportions [@moore2008; @parnell2010; @parnell2013; @neubauer2015; @stock2018]. Early Bayesian implementations included MixSIR [@moore2008], which incorporated uncertainty and prior information, and SIAR (Stable Isotope Analysis in R [@parnell2010]), which provided an open-source R framework for propagating natural variation and uncertainty. MixSIAR further expanded these capabilities by incorporating covariates and hierarchical structures [@stock2018], making it adaptable to complex ecological systems. Extensions have also represented multiple isotopes and multiple trophic steps, including latent intermediate trophic levels when food-web structure is known [@heikkinen2022]. While these models differ in computational complexity and assumptions, they collectively advanced the application of mixing models in ecological research and understanding of ecosystem source-sink dynamics.
 
-Recent studies dealing with complex mixtures have explored multiple tracers, such as stable isotopes alongside fatty acids to better understand the source contributions [@neubauer2015; @hoenig2022]. More recently, we have also seen applications of environmental DNA (eDNA) metabarcoding to help unravel complex mixtures where there may be overlap in isotopic tracer signatures (e.g., [@reef2017aslo; @ortega2020aslo]). However, these explorations have typically been independent to the mixture model. Without an integrated model for multi-tracer analyses, the interpretation of these results has typically been limited to an ad-hoc, side-by-side comparison of tracer-specific outputs. To address this issue, mixture models have been produced for use in trophic studies, combining fatty acids/amino acids and stable isotopes data to enhance dietary estimations [@neubauer2015; @pickett2024]. However, although combining multiple tracers increases the discriminatory power of mixture models, it also introduces methodological challenges, such as differences in temporal integration and tracer-specific biases (e.g., different degradation rates [@nielsen2018]). These findings underscore the importance of selecting appropriate tracers based on study objectives and ecological context, as well as the need for methodological advancements to better integrate diverse biotracer data into ecological modelling.
+Recent studies dealing with complex mixtures have combined multiple families of chemical tracers, such as stable isotopes and fatty acids, to better resolve prey contributions to consumer diets [@neubauer2015; @pickett2024]. Combining tracer families can improve discrimination when they provide complementary information, but inference can also be sensitive to tracer selection, disagreement among tracer families, differences in temporal integration, tissue turnover, assimilation and method-specific biases [@nielsen2018; @pickett2024; @kruger2024]. Independent evidence can further constrain otherwise poorly identified proportions. For example, prey availability has been used to post-process posterior diet compositions from a Bayesian isotope mixing model, with the influence of availability weighted by the pairwise isotopic overlap between prey [@yeakel2011plosone], while eDNA or DNA-metabarcoding evidence has been compared with source or diet compositions inferred from stable isotopes [@reef2017aslo; @ortega2020aslo; @hoenig2022]. These approaches, however, have generally helped distinguish among fully characterised sources or enabled post-hoc comparisons between separate outputs. They do not directly represent a portion of the mixture arising from sources for which no source-specific tracer signature exists. These approaches demonstrate the value of complementary evidence but do not generally combine a quantitative tracer likelihood, an uncertain sample-matched compositional likelihood and a pooled source lacking an empirically characterised tracer signature within the same model.
 
-Although mixture models typically focus on a predefined number of potential sources, in many real-world scenarios a portion of the mixture will originate from sources that are unable to be adequately sampled to obtain a representative signature. By the latter we mean one that incorporates the major temporal axes of variation alongside the potential spatial domain over which a contribution can be made to the mixture of interest. The application of mixture models becomes non-trivial when the number of source components is unknown because, if no external information is available, an infinite set of mixtures can generate the same observation, so estimating the true number of mixture components is indeed impossible [@richardson1997statsmet; @robert1999; @phillips2001; @phillips2003; @neubauer2013]. At the same time, ignoring the possibility that not all potential sources have been sampled may produce spurious conclusions because most mixture models assume that source mixing contributions sum to unity [@stock2018]. An alternative is to recognize this uncertainty, and seek to determine the contribution of sources for which there is relatively high confidence in obtaining a representative tracer signature, and allowing for other source contributions to be part of the final mixture model solution (e.g., as a probability mass that was not attributable to the empirically sampled sources).
+Many tracer-based mixing studies begin with a predefined number of potential sources that can be sampled. However, in many real-world scenarios a portion of the mixture may originate from sources that cannot be sampled adequately to obtain a representative tracer signature. A representative signature should capture source variation across the temporal and spatial domains relevant to its contribution to the mixture. When contributing sources are incompletely characterised, tracer data alone may not uniquely identify either their number or their proportional contributions [@neubauer2013]. Inference about an unknown number of components nevertheless becomes possible under explicit distributional and prior assumptions, including reversible-jump and Bayesian non-parametric mixture models [@richardson1997statsmet; @neubauer2013]. If an important source is omitted, a model that allocates the entire mixture among the included sources is fitted to a misspecified candidate-source set and may consequently bias attribution among those sources [@stock2018]. An alternative is to recognize this uncertainty, seek to determine the contribution of sources for which there is relatively high confidence in obtaining a representative tracer signature, and allow for other source contributions to be part of the final mixing model solution (e.g., as a probability mass that was not attributable to the empirically sampled sources). 
 
-Here we introduce MixMustR, a flexible Bayesian mixture model package written in R [@r]. MixMustR writes models in the probabilistic programming language Stan [@rstan] to estimate source mixing proportions. It does so by incorporating simultaneous likelihood evaluation from two independent data streams collected from the mixture of interest (Fig \ref{fig-1} a--b): one obtained from chemical tracers/biomarkers (i.e., a single tracer measurement per observation, e.g., from stable isotopes and fatty acids), and another yielding source composition (e.g., based on eDNA metabarcoding). MixMustR also allows for the estimation of an additional, unsampled source component. We evaluate the ability of MixMustR models to recover original source mixing proportions using two synthetic mixture datasets anchored to empirical values for a range of plant carbon sources in marine soils. Some of our model choices build on the widely-used MixSIAR [@stock2018], and we therefore explore how the two modelling approaches compare. A full tutorial on how to use MixMustR is available on GitHub [https://github.com/open-AIMS/MixMustR](https://github.com/open-AIMS/MixMustR). We expect MixMustR to have wide applicability in ecological studies, particularly given the growing usage and availability of multiple tracers spanning traditional stable isotopes, fatty acids and eDNA metabarcoding to understand carbon source-sink dynamics [@reef2017aslo; @ortega2020aslo; @queiros2019ecolmonogr], and trophic interactions (e.g., refs. [@nielsen2018; @hoenig2022; @parravicini2020]).
+Here we introduce MixMustR, a flexible Bayesian mixing modelling package written in R [@r]. MixMustR uses models written in the probabilistic programming language Stan [@rstan] to estimate source mixing proportions by jointly evaluating likelihoods for two conditionally independent likelihood contributions linked through shared sample-level source proportions (Fig. \ref{fig-1} a--b). The first comprises quantitative measurements of one or more chemical tracers or biomarkers, such as stable isotopes and fatty acids (Fig. \ref{fig-1} a). The second provides uncertain source-composition estimates for the same mixture samples. These compositions may be derived from appropriately processed outputs of particle-tracking simulations, eDNA metabarcoding, community-composition observations, relative biomass estimates or gut-content analyses (Fig. \ref{fig-1} b). Both data streams are mandatory inputs, and MixMustR links them through shared sample-level source proportions and comprises an additional pooled unsampled-source component. Alternative model structures estimate sampled-source mean signatures, estimate the multivariate tracer signature of the pooled unsampled source using a covariance-informed prior, and accommodate either independent or hierarchical group-level source proportions (Fig. \ref{fig-1} c--e). We evaluate the ability of MixMustR models to recover known mixing proportions using a factorial design of synthetic datasets anchored to published empirical values for plant carbon sources in marine soils. Some model choices build on the widely-used MixSIAR [@stock2018]. A full tutorial is available on GitHub [https://github.com/open-AIMS/MixMustR](https://github.com/open-AIMS/MixMustR). MixMustR is intended for source-attribution problems in which both streams provide defensible, sample-matched evidence about the same underlying source composition. Potential applications include organic-carbon source attribution [@reef2017aslo; @ortega2020aslo; @queiros2019ecolmonogr] and trophic interactions [@nielsen2018; @hoenig2022; @parravicini2020].
 
 \begin{figure}
-  \centering{\includegraphics[width=1\linewidth,height=\textheight,keepaspectratio]{../diagram/diagram.png}}
-  \caption{\label{fig-1}MixMustR input data and framework. MixMustR relies on two independent data streams that are collected from the same $N$ samples. a) The first stream (blue panel) is characterised by the chemical tracer/biomarker (e.g., stable isotope, fatty acid) dataset, whereby a mixture measurement is obtained for every $k^{\text{th}}$ tracer and $n^{th}$ observation. The original sources of such mixtures are unknown, and come from $J$ likely sources, plus (?) for which no specific tracer information is available. b) The second stream (beige panel) is yielded by community composition datasets which can be transformed to mixing proportions, such as those obtained via eDNA metabarcoding. This stream of information can reveal mixture sources beyond the original $J$ sources considered by researchers, and MixMustR leverages that information by combining those additional sources into one single "unsampled" source, which would amount to the (?) in the first data stream. Given these data, the user can choose among eight model variants based on: the mean tracer signatures or means and their uncertainty (c), if tracer signatures can be estimated or should be fixed (d), and if observations are independent or hierarchical (e).}
+  \centering{\includegraphics[width=0.85\linewidth,height=\textheight,keepaspectratio]{../diagram/diagram.png}}
+  \caption{\label{fig-1}\textbf{MixMustR input data streams and modelling framework.} MixMustR integrates two complementary data streams from the same $N$ mixture samples, linked through shared latent source proportions. \textbf{a)} Data stream 1 comprises quantitative measurements of $K$ chemical tracers or biomarkers (e.g., stable isotopes, fatty acids) as an $N \times K$ matrix; each mixture may include at least $J$ underlying sampled sources. \textbf{b)} Data stream 2 provides processed source-composition evidence derived from abundance, occurrence, metabarcoding, particle-tracking or related data that can reveal contributions beyond the $J$ sampled sources; these are pooled into the same unsampled-source category, yielding an $N \times (J+1)$ structure whose proportions sum to one per sample. Given these streams, users choose among eight model variants defined by three binary choices: \textbf{c)} sampled-source mean signatures fixed or estimated; \textbf{d)} the pooled unsampled-source signature fixed at the sampled-source mean or estimated via a covariance-informed prior; \textbf{e)} independent or hierarchical (grouped) source proportions. Icons from the \href{https://thenounproject.com}{Noun Project} (all \href{https://creativecommons.org/licenses/by/3.0/deed.en}{CC BY 3.0}): fatty acid by Template, DNA by BomSymbols, stable isotope by Lars Meiertoberens, plankton by Tamrin, terrestrial grass by Luis Prado, seaweed by mangunkarsa. Icons from \href{https://www.phylopic.org/}{PhyloPic}: gastropod shell by Tauana Cunha (\href{https://creativecommons.org/publicdomain/zero/1.0/deed.en}{CC0 1.0}), amphipod by T. Michael Keesey (\href{https://creativecommons.org/licenses/by-sa/3.0/deed.en}{CC BY-SA 3.0}). All other icons by the authors.}
 \end{figure}
 
 # Methods
 
-\noindent Many existing implementations of Bayesian mixture models use the Dirichlet distribution, $\mathcal{D}$, to estimate the contributing mixing proportion of each source to the final mixture [@robert1999]:
+\noindent \underline{\textit{Global structure}}
+
+\noindent In MixMustR, let $n=1,\ldots,N$ index mixture observations and let
+$j=1,\ldots,J+1$ index source categories. The first $J$ categories
+represent the sampled sources for which tracer information (data stream 1) is available, whereas category $J+1$ represents the pooled unsampled source. $J+1$^th^ source is only observed in data stream 2 (Fig. \ref{fig-1}a--b). For each
+observation $n$, the latent vector of source mixing proportions (i.e., the main estimation target) is:
 
 $$
-\symbf{\pi} \sim \mathcal{D}(\symbf{\alpha}),
+\symbf{\pi}_n
+=
+\left(
+\underbrace{\pi_{n1},\ldots,\pi_{nJ}}_{\text{$J$ sampled sources}},
+\underbrace{\pi_{n,J+1}}_{\text{pooled unsampled source}}
+\right)^\top.
 $$
 
-\noindent with $\symbf{\pi}$ being a vector of $J$ elements, each representing a mixing proportion for the $j^{\text{th}}$ source, so that $\sum_{j=1}^{J}\pi_j = 1$. The mixing proportions are estimated from the prior concentration parameter vector, $\symbf{\alpha}$, which often come in the form of a user-informed prior, and a normal likelihood
+Each element $\pi_{nj}$ is the proportion of observation $n$ attributed
+to source category $j$. All proportions are strictly positive and sum
+to one within each mixture observation:
 
 $$
-Y \sim \sum_{j=1}^{J} \pi_j \mathcal{N}(\theta_j, \sigma_j^2),
+\pi_{nj}>0,
+\qquad
+\sum_{j=1}^{J+1}\pi_{nj}=1,
+\qquad
+n=1,\ldots,N.
 $$
 
-\noindent with $Y$ being the mixture observation, $\theta_j$ and $\sigma_j^2$ being the mean signature (e.g., stable isotope) and variance associated with source $j$. Given the 0-1 bounded nature of the source-specific probabilities, and the fact that they must sum to one and are therefore interdependent [@stock2018], mixture models often adopt re-parametrisations of the Dirichlet such as the additive log-ratio which removes the above constraints in the parameter space, allowing the use of unconstrained (e.g., Gaussian) priors [@aitchison1999; @neubauer2015; @stock2018]. One disadvantage of the additive log-ratio is that it requires the arbitrary declaration of a source-reference probability to unconstrain the remaining set of estimable probabilities. MixMustR uses an alternative re-parametrisation of the Dirichlet which does not require such declaration. This is achieved via the softmax function ($\vartheta$) in Stan:
+Rather than estimating $\symbf{\pi}_n$ directly using a Dirichlet distribution---which would be typical of classic mixture models[@robert1999], all MixMustR variants use a baseline-logit representation followed by the softmax transformation. The pooled unsampled source is treated as the reference category, so only the $J$ logits required to define a composition with $J+1$ parts are estimated:
 
 $$
-\symbf{\pi} = \vartheta(\symbf{\zeta}) = \frac{e^{\symbf{\zeta}}}{\sum e^{\symbf{\zeta}}},
+\symbf{\eta}_n = \left(\eta_{n1},\ldots,\eta_{nJ},0 \right)^\top,
 $$
 
-\noindent where $\symbf{\zeta}$ is an input vector of $J$ real elements, and $\pi_j$ is interpreted as the proportion that source $j$ contributes to the final mixture. Hence, rather than estimating the vector $\symbf{\pi}$ directly using the Dirichlet distribution as above, we estimate $\symbf{\zeta}$, and then apply the softmax function to calculate $\symbf{\pi}$. This is numerically convenient because $\symbf{\zeta}$ is unconstrained, so it can be estimated assuming Gaussian prior distributions.
+$$
+\log(\pi_{nj}) = \log\operatorname{softmax}\left(\symbf{\eta}_n,j\right),
+$$
+
+$$
+\log\operatorname{softmax}\left(\symbf{\eta}_n, j\right) = \eta_{nj} - \log\left(\sum\exp(\symbf{\eta}_n)\right).
+$$
+
+The $(J+1)^{\mathrm{th}}$ logit is fixed at zero for identifiability. This construction is equivalent to using the pooled unsampled source as the reference category in an additive log-ratio representation. The resulting source proportions remain constrained to the simplex, whereas the $J$ free logit coordinates can be assigned unconstrained prior distributions. Here, we adopt Gaussian priors for mathematical convenience [@aitchison1980biometrika].
+
+MixMustR provides eight model variants which share the same baseline-logit composition, the same two conditionally independent data-stream likelihoods, and the same tracer-specific residual-error structure. The two data streams are linked through the common latent source composition, $\symbf{\pi}_n$, allowing both sources of information to contribute simultaneously to estimation of the mixing proportions. For data stream 1:
+
+$$
+Y_{nk}
+\sim
+\mathcal{N}
+\left(
+\mu_{nk}^{(Y)},
+\sigma_{nk}^{2}
+\right),
+$$
+
+$$
+\mu_{nk}^{(Y)}
+=
+\sum_{j=1}^{J+1}
+\pi_{nj}\mu_{jk}^{(x)},
+$$
+
+$$
+\forall n=1,\ldots,N,
+\qquad
+\forall k=1,\ldots,K,
+$$
+
+where $Y_{nk}$ is the standardised observed value of tracer $k$ in mixture observation $n$, $x_{jk}$ is the standardised observed mean of tracer $k$ for sampled source $j$, and $\mu_{jk}^{(x)}$ denotes the tracer signature used by the model (which can be fixed or estimated, see \textit{Estimating the tracer signatures} below; Fig. \ref{fig-1}c) for source $j$. All tracer observations and source signatures are standardised before fitting. The observation- and tracer-specific variance is defined as:
+
+$$
+\sigma_{nk}^{2}
+=
+\sigma_{y,k}^{2}
++
+\sum_{j=1}^{J}
+\pi_{nj}^{2}s_{jk}^{2},
+$$
+
+where $s_{jk}$ is the observed tracer standard deviation. The second term propagates the supplied sampled-source variation through the mixture according to the square of each source contribution. The summation stops at $J$ because no independently observed process variance is available for the pooled unsampled source. Variation not otherwise represented for that component is therefore absorbed by the tracer-specific residual standard deviation $\sigma_{y,k}$.
+
+On the standardised tracer scale, the residual standard deviation is parametrised as:
+
+$$
+\sigma_{y,k}
+=
+0.01+0.05\exp(\ell_k),
+$$
+
+$$
+\ell_k\sim\mathcal{N}(0,0.5^2).
+$$
+
+The positive floor prevents the residual standard deviation from approaching the zero boundary and thereby assists with efficient posterior sampling. Each tracer receives its own residual scale, allowing unexplained variation to differ among the different $k$ tracers.
+
+Users supply an $N \times J$ matrix of compositional evidence for the $J$ sampled sources. MixMustR reconstructs the pooled unsampled component as:
+
+$$
+q_{nJ+1} = 1 - \sum_{j=1}^{J}q_{nj},
+$$
+
+and the resulting \textit{model ready} $N \times J + 1$ composition is floored where necessary, renormalised and transformed to the logarithmic scale. MixMustR does not attempt to infer the number or identity of these missing sources. Instead, their contributions must be amalgamated into one pooled unsampled-source category before fitting. The additional $J + 1$ pooled category is then represented in the tracer (data stream 1) and source-composition (data stream 2) components of the model. Then, the data stream 2 the likelihood is modelled over the model ready $\log(q)_{nj}$ (i.e., $\forall n=1,\ldots,N, \qquad \forall j=1,\ldots,J+1$) assuming a Student's-t distribution:
+
+$$
+\log(q)_{nj}
+\sim
+t_{\nu_q}
+\left(
+\log(\pi_{nj}),
+\sigma_{\log(q),nj}
+\right),
+$$
+
+$$
+\forall n=1,\ldots,N,
+\qquad
+\forall j=1,\ldots,J+1,
+$$
+
+where $\sigma_{\log(q),nj}$ is an observation- and source-specific measure of uncertainty input by the user for the corresponding element of data stream 2. Smaller values place greater likelihood weight on agreement between $\log(q)_{nj}$ and the latent mixing proportion, $\log(\pi_{nj})$, whereas larger values allow greater disagreement. The appropriate values will be study-specific and may require an independent protocol for quantifying measurement uncertainty or eliciting expert knowledge (see Discussion).
+
+The Student-$t$ degrees of freedom parameter, $\nu_q$, is estimated subject to $\nu_q>2$ and assigned the prior:
+
+$$
+\nu_q \sim \operatorname{Gamma}(2,0.1),
+$$
+
+\noindent using the shape--rate parametrisation adopted by Stan. This robust likelihood reduces the influence of individual data stream 2 observations that differ strongly from the proportions supported jointly by the two data streams. The component-wise likelihood contributions are centred on a single normalised composition because all values of $\log(\pi_{nj})$ are calculated from the same log-softmax vector. Consequently, the dependence required by the simplex enters through the shared normalisation rather than through a multivariate-normal additive-log-ratio likelihood.
+
+The tracer and source-composition observations are not concatenated or treated as measurements of the same quantity. Conditional on $\symbf{\pi}_n$ and the remaining model parameters, they contribute separate likelihood terms because they both constitute independently collected data streams (rather than one being a prior of the other) associated with the same mixture samples. Such complementary observations are increasingly available, for example when samples are analysed for both stable-isotope or fatty-acid composition and eDNA metabarcoding. Other suitable information linked to spatial location of samples may also be produced by particle-tracking source-sink simulations, habitat-weighted availability estimates, or proportional community-composition data that could help inform the relative abundance of sources contributing to each mixture, ideally with well-justified uncertainty (i.e., $\sigma_{\log(q),nj}$).
+
+Because the likelihood is evaluated on $\log(q_{nj})$, every supplied proportion in data stream 2 must be strictly positive. Applications containing structural or sampling zeros therefore require an explicit and scientifically defensible zero-handling rule before model fitting. By default, MixMustR applies a minimal numerical safeguard rather than a substantive zero-handling rule: stream-2 proportions are floored at a small constant ($10^{-12}$ on the raw proportion scale, controlled by the \texttt{eps} argument) and renormalised to sum to one within each observation before taking logarithms. Researchers whose data contain structural or sampling zeros should not rely on this default and should instead supply an explicit, larger floor or otherwise pre-process their proportions according to a documented rule. In the simulations described below, compositions were generated using a softmax transformation and were therefore strictly positive.
 
 \noindent \underline{\textit{MixMustR model variants}}
 
-MixMustR currently allows for eight model variants which result from three user-driven binary choices (Fig \ref{fig-1} c--e): 1) should the model only ingest the mean sampled-source tracer signatures (equivalent to "residual-only error" structure of MixSIAR [@stock2018]) or should it incorporate their uncertainty based on user-provided mean, variance and sample size information (equivalent to "process error" structure of MixSIAR, Fig \ref{fig-1}c); 2) should the unsampled-source tracer signatures be fixed at the mean across all sampled sources, or should they rather be estimated based on a prior informed by the mean and variance across the sampled tracer signatures? (Fig \ref{fig-1}d) and 3) should all observations be treated as independent or should the model include a hierarchical grouping structure? (Fig \ref{fig-1}e).
+Variation around the global model structure results from three binary modelling choices (Fig. \ref{fig-1}c--e), resulting in up to 8 model variants. First, the mean tracer signature of each sampled source can be fixed at its observed mean or estimated while propagating uncertainty in that mean from the supplied source standard deviation and sample size (Fig. \ref{fig-1}c). Second, the tracer signature of the pooled unsampled source can be fixed at the arithmetic mean across sampled-source signatures or estimated jointly across tracers using a covariance-informed prior (Fig. \ref{fig-1}d). Third, source proportions can be estimated independently for individual observations or using a hierarchical structure in which observations are nested within groups (Fig. \ref{fig-1}e). Input, parameter and intermediate calculated quantities are defined in Table \ref{tab:model-notation}.
 
-\noindent \underline{\textit{An independent likelihood evaluation}}
+\begin{longtable}{
+    >{\RaggedRight\arraybackslash}p{0.19\textwidth}
+    >{\RaggedRight\arraybackslash}p{0.19\textwidth}
+    >{\RaggedRight\arraybackslash}p{0.56\textwidth}
+}
+\caption{Definitions and classifications of the inputs, parameters, and
+intermediate quantities used in the MixMustR model equations. Quantities used
+exclusively to generate simulated datasets are not included. A transformed
+parameter is defined here as an intermediate quantity calculated
+deterministically from model inputs or parameters.}
+\label{tab:model-notation}\\
 
-A key novelty in MixMustR when compared to existing packages and models is the existence of a second data stream whose likelihood is independently evaluated. Doing so allows for extra calibration of the estimates of $\symbf{\zeta}$ that would otherwise occur on the basis of tracer data only (Fig \ref{fig-1} a). This model addition is only possible when the user has access to an independently collected data stream that yields compositional mixing proportion (Fig \ref{fig-1} b). This type of data is becoming increasingly common, for example, in samples that are simultaneously processed for stable isotope and eDNA composition. In the particular case of (e)DNA metabarcoding data, multiple additional unsampled sources (i.e., which might have not been included in the original source sampling) can emerge, and in MixMustR these need to be amalgamated a priori as part of a single unsampled source. For tractability, MixMustR currently ignores any biases such as trophic discrimination, fractionation, diagenesis, or any other analogous loss processes that would yield differences in the mixing proportions from each data stream, and therefore it is agnostic to the quality assessment of the mixing proportions (though see below how input parameter $\sigma_{\text{ln}\rho}$ helps address this limitation).
+\toprule
+\textbf{Symbol} &
+\textbf{Classification} &
+\textbf{Definition} \\
+\midrule
+\endfirsthead
 
-Solving for a source-specific $\zeta_j$ leads to $\zeta_j = \text{ln}\pi_j + c$, with $\text{ln}\pi_j$ being a log-transformed mixing proportion, and $c$ is an unknown constant which can be ignored in practice (i.e., $\sum\vartheta(\symbf{\zeta}) = \sum\vartheta(\symbf{\zeta + c})$). MixMustR transforms the mixing proportions from data stream 2, $\text{ln}\symbf{\rho}$, prior to running the model:
+\multicolumn{3}{l}{
+    \tablename\ \thetable{} -- \textit{continued from the previous page}
+}\\
+\toprule
+\textbf{Symbol} &
+\textbf{Classification} &
+\textbf{Definition} \\
+\midrule
+\endhead
 
-$$
-\text{ln}\rho_{n, j} \sim \mathcal{N}\left(\zeta_{n,j}, \sigma_{\text{ln}\rho_{n, j}}^2\right),
-$$
-$$
-\forall n = 1, \dots, N, \quad \forall j = 1, \dots, J + 1, \quad \forall k = 1, \dots, K.
-$$
+\midrule
+\multicolumn{3}{r}{\textit{Continued on the next page}} \\
+\endfoot
 
-\noindent where the observation- and source-specific standard deviations of $\text{ln}\rho$, $\sigma_{\text{ln}\rho_{n, j}}$, is a measurement error on the latent $\zeta_{n,j}$, and in practice can be interpreted as the degree of confidence a user has in each element of $\text{ln}\rho$. Importantly, MixMustR ingests that confidence at the *observation and source* level, and offers the user a visualisation function to empirically gauge the appropriate value for $\sigma_{\text{ln}\rho_{n, j}}$. An appropriate degree of confidence via $\text{ln}\rho$ will be study-specific, and might require an independent protocol based on elicitation of expert knowledge (e.g., extraction quality control and taxonomic reach of primers in the case of eDNA metabarcoding).
+\bottomrule
+\endlastfoot
 
-An alternative approach might be to leverage $\text{ln}\symbf{\rho}$ and $\sigma_{\text{ln}\rho}$ as prior information on $\symbf{\pi}$, although MixMustR explicitly treats these as independent data, of the same level of relevance as the data from data stream 1. However, in the online supplementary information, we also show that treating data stream 2 as a prior rather than using a likelihood evaluation leads to similar outcomes.
+$n,\,N$
+&
+Input
+&
+Mixture-observation index and total number of mixture observations,
+respectively.
+\\
+
+$j,\,J$
+&
+Input
+&
+Source-category index and number of sampled sources, respectively. Category
+$J+1$ represents the pooled unsampled source.
+\\
+
+$k,\,K$
+&
+Input
+&
+Tracer index and total number of tracers or biomarkers, respectively.
+\\
+
+$g,\,G;\;g[n]$
+&
+Input
+&
+Group index, total number of groups, and the group containing observation
+$n$, respectively. These quantities apply only to hierarchical model
+variants.
+\\
+
+$Y_{nk}$
+&
+Input
+&
+Standardised observed value of tracer $k$ in mixture observation $n$;
+part of data stream~1.
+\\
+
+$q_{nj}$
+&
+Input
+&
+Observed source-composition proportion for observation $n$ and source $j$;
+part of data stream~2. The proportions are strictly positive.
+\\
+
+$\log(q_{nj})$
+&
+Derived input
+&
+Log-transformed and, where required, renormalised source-composition
+observation used in the likelihood for data stream~2.
+\\
+
+$\pi_{nj}$
+&
+Transformed parameter
+&
+Latent source proportion for observation $n$ and source $j$, obtained by
+applying the softmax transformation to the baseline-logit coordinates. For
+each observation,
+$\pi_{nj}>0$ and
+$\sum_{j=1}^{J+1}\pi_{nj}=1$.
+\\
+
+$\eta_{nj}$
+&
+Transformed parameter
+&
+Baseline-logit coordinate for sampled source $j$ in observation $n$,
+calculated from the overall, group-level, and observation-level components.
+The coordinate for the pooled unsampled source is fixed at zero.
+\\
+
+$\boldsymbol{\eta}_{n}$
+&
+Transformed parameter
+&
+Complete baseline-logit vector for observation $n$:
+\[
+\boldsymbol{\eta}_{n}
+=
+\left(
+\eta_{n1},\ldots,\eta_{nJ},0
+\right)^{\mathsf T}.
+\]
+The source proportions are calculated as
+$\boldsymbol{\pi}_{n}
+=\operatorname{softmax}(\boldsymbol{\eta}_{n})$.
+\\
+
+$x_{jk}$
+&
+Input
+&
+Standardised observed mean of tracer $k$ for sampled source $j$;
+part of data stream~1.
+\\
+
+$s_{jk}$
+&
+Input
+&
+Observed standard deviation of tracer $k$ for sampled source $j$;
+part of data stream~1.
+\\
+
+$m_{jk}$
+&
+Input
+&
+Sample size underlying the observed sampled-source mean $x_{jk}$;
+part of data stream~1. This input is used when sampled-source tracer signatures are estimated.
+\\
+
+$\mu^{(x)}_{jk}$
+&
+Input or parameter
+&
+Tracer signature used by the model for sampled source $j$ and tracer $k$;
+part of data stream~1. The signature is an input when fixed at $x_{jk}$ and a parameter when estimated from $x_{jk}$, $s_{jk}$, and $m_{jk}$.
+\\
+
+$\mu^{(x)}_{J+1,k}$
+&
+Input or parameter
+&
+Mean signature of tracer $k$ for the pooled unsampled source. The signature
+is an input when fixed at $\bar{x}_{k}$ and a parameter when estimated using
+the multivariate unsampled-source prior.
+\\
+
+$\mu^{(Y)}_{nk}$
+&
+Transformed parameter
+&
+Expected value of tracer $k$ in mixture observation $n$, calculated as
+\[
+\mu^{(Y)}_{nk}
+=
+\sum_{j=1}^{J+1}
+\pi_{nj}\mu^{(x)}_{jk}.
+\]
+\\
+
+$\sigma^{2}_{nk}$
+&
+Transformed parameter
+&
+Total observation- and tracer-specific variance in the data-stream-1
+likelihood:
+\[
+\sigma^{2}_{nk}
+=
+\sigma^{2}_{y,k}
++
+\sum_{j=1}^{J}
+\pi_{nj}^{2}s_{jk}^{2}.
+\]
+The summation propagates uncertainty associated with the sampled-source
+signatures.
+\\
+
+$\sigma_{nk}$
+&
+Transformed parameter
+&
+Observation- and tracer-specific standard deviation used in the
+data-stream-1 likelihood, calculated as
+$\sigma_{nk}=\sqrt{\sigma^{2}_{nk}}$.
+\\
+
+$\sigma_{y,k}$
+&
+Transformed parameter
+&
+Tracer-specific residual standard deviation on the standardised scale,
+obtained from the unconstrained parameter $\ell_k$ using the model's positive
+transformation.
+\\
+
+$\ell_k$
+&
+Parameter
+&
+Unconstrained parameter determining the tracer-specific residual standard
+deviation $\sigma_{y,k}$.
+\\
+
+$\sigma_{\log(q),nj}$
+&
+Input
+&
+User-supplied uncertainty associated with $\log(q_{nj})$;
+part of data stream~2. Smaller values strengthen the relative contribution of data stream~2 to the joint likelihood.
+\\
+
+$\nu_q$
+&
+Parameter
+&
+Degrees-of-freedom parameter of the Student-$t$ likelihood for
+$\log(q_{nj})$, constrained to be greater than two.
+\\
+
+$\varepsilon$
+&
+Input
+&
+Small positive constant applied as a floor to the observed data-stream-2
+proportions before renormalisation and logarithmic transformation.
+\\
+
+$\zeta_{jk}$
+&
+Parameter
+&
+Standard-normal auxiliary parameter used in the non-centred
+parameterisation of an estimated sampled-source tracer signature.
+\\
+
+$\bar{x}_{k}$
+&
+Derived input
+&
+Arithmetic mean of the sampled-source means for tracer $k$. When the
+pooled-unsampled signature is fixed,
+$\mu^{(x)}_{J+1,k}=\bar{x}_{k}$.
+\\
+
+$\bar{\mathbf{x}}_{u}$
+&
+Derived input
+&
+$K$-dimensional prior centre for the pooled-unsampled tracer signature,
+calculated from the across-source arithmetic means.
+\\
+
+$\mathbf{L}_{u}$
+&
+Derived input
+&
+Lower-triangular Cholesky factor of the regularised empirical covariance
+matrix calculated from the sampled-source tracer signatures.
+\\
+
+$\mathbf{z}_{u}$
+&
+Parameter
+&
+$K$-dimensional vector of standard-normal auxiliary parameters used in the
+non-centred prior for the pooled-unsampled tracer signature.
+\\
+
+$\tau_u$
+&
+Parameter
+&
+Positive global scale controlling the displacement of the estimated
+pooled-unsampled signature from its prior centre.
+\\
+
+$\boldsymbol{\mu}^{(x)}_{J+1}$
+&
+Transformed parameter
+&
+Complete $K$-dimensional pooled-unsampled tracer-signature vector. When the
+unsampled signature is estimated, it is calculated as
+\[
+\boldsymbol{\mu}^{(x)}_{J+1}
+=
+\bar{\mathbf{x}}_{u}
++
+\tau_u\mathbf{L}_{u}\mathbf{z}_{u}.
+\]
+\\
+
+$\mathbf{I}_{K}$
+&
+Derived input
+&
+$K\times K$ identity matrix used to regularise the empirical covariance
+matrix of the sampled-source tracer signatures; part of data stream~1.
+\\
+
+$\beta_{0j}$
+&
+Parameter
+&
+Overall baseline log-ratio for sampled source $j$, relative to the pooled
+unsampled source.
+\\
+
+$\alpha_{gj}$
+&
+Transformed parameter
+&
+Group-level baseline log-ratio for sampled source $j$ in group $g$,
+calculated from the overall baseline, the group-level scale, and the
+standard-normal group-level deviation. This quantity applies only to
+hierarchical model variants.
+\\
+
+$\epsilon_{gj}$
+&
+Parameter
+&
+Standard-normal group-level deviation for sampled source $j$ in group $g$.
+\\
+
+$\gamma_{nj}$
+&
+Parameter
+&
+Standard-normal observation-level deviation for sampled source $j$ in
+observation $n$.
+\\
+
+$\sigma_{\epsilon,j}$
+&
+Parameter
+&
+Positive source-specific standard deviation governing the group-level
+deviations.
+\\
+
+$\sigma_{\gamma,j}$
+&
+Parameter
+&
+Positive source-specific standard deviation governing the observation-level
+deviations.
+\\
+
+\end{longtable}
 
 \noindent \underline{\textit{Estimating the tracer signatures}}
 
-In a dataset containing $N$ observations, $J$ *sampled* sources (i.e., those initially considered by the researcher), and $K$ chemical tracers/biomarkers, MixMustR estimates the mixing contribution (i.e., proportions) of each sampled source to the final observed mixture in two different ways depending on the user choice (Fig \ref{fig-1}c):
-
-\begin{centering}
-\noindent\begin{minipage}{.4\linewidth}
-Residual-only error
-\[
-  Y_{n, k} \sim \mathcal{N}\left(x_{j, k}\pi_{n, j}, \sigma_k^2\right)\phantom{\sqrt{\omega_{j, k}^2}}
-\]
-\end{minipage}
-\begin{minipage}{.4\linewidth}
-Process error
-\[
-  Y_{n, k} \sim \mathcal{N}\left(\mu_{j, k}\pi_{n, j}, \omega_{j, k}^2 \pi_{n, j}^2\right)
-\]
-\end{minipage}
-\end{centering}
+When sampled-source signatures are fixed, the model uses:
 
 $$
-\forall n = 1, \dots, N, \quad \forall j = 1, \dots, J, \quad \forall k = 1, \dots, K.
+\mu_{jk}^{(x)}=x_{jk},
+\qquad
+j=1,\ldots,J.
 $$
 
-\noindent In the residual-error only option, $x_{j, k}$ is the user-informed mean signature for the $j^{\text{th}}$ sampled source and $k^{\text{th}}$ tracer and $\sigma_k$ is the tracer-specific residual error. In the process error option, $\mu_{j, k}$ is the *estimated* tracer- and source-specific signature and $\sqrt{\omega_{j, k}^2 \pi_{n, j}^2}$ is the process error (see definitions of $\mu$ and $\omega$ in the online supplementary information). In both versions, $\pi_{n, j}$ is the estimated mixing proportion from observation $n$ and source $j$.
-
-\noindent \underline{\textit{Estimating an unsampled tracer signature}}
-
-As we argue in the introduction, the researcher may not know the full suite of sources that contribute to a mixture, and for resource or logistical constraints may end up selecting a subset of sources for which they can obtain tracer data. Therefore, should an *unsampled* component be present in the sink mixture, it could be composed of one or multiple sources (Fig \ref{fig-1}a--b). MixMustR attempts to estimate the proportion of unknown contributions as a pooled source estimate that might comprise a collective of multiple unsampled sources. We note that studies have attempted to estimate the number of sources based on the data, but that is also a very challenging task (e.g., refs. [@robert1999; @neubauer2013]).
-
-In MixSIAR, the presence of an unsampled source is indirectly captured by a multiplicative error term (parameter $\xi$ in ref. [@stock2018]) which MixMustR does not incorporate. Instead, MixMustR estimates an unsampled signature using two approaches: either by fixing or estimating the value of each unsampled tracer-specific signature. Fixing the unsampled signature values relies on either the mean tracer signature across all user-informed sampled sources signatures (i.e., for a given tracer $k$, the mean across all $x_j$), or the mean estimated signature (i.e., for a given tracer $k$, the mean across all $\mu_j$). Estimating the unsampled signature values relies on the same information, plus the pre-existing error structure. For example, assuming a process error model choice (see previous section), the unsampled signature could be estimated as:
+When sampled-source signatures are estimated, each source- and tracer-specific mean receives a non-centred prior scaled by the standard error of the observed source mean:
 
 $$
-\bar{\mu}_{k} = \sum_{j=1}^{J} \mu_{j, k} / J
-$$
-$$
-\bar{\omega}_{k} = \sqrt{\sum_{j=1}^{J} \omega_{j, k}^2 / J}
-$$
-
-\smallskip
-
-\begin{centering}
-\noindent\begin{minipage}{.45\linewidth}
-Fixing
-\[
-  \phantom{mu_{J + 1, k}}
-\] \[
-  Y_{n, k} \sim \mathcal{N}\left(\bar{\mu}_{k} \pi_{n, J + 1}, \bar{\omega}_{k}^2 \pi_{n, J + 1}^2\right)
-\]
-\end{minipage}
-\begin{minipage}{.45\linewidth}
-Estimating value
-\[
-  \mu_{J + 1, k} \sim \mathcal{N}(\bar{\mu}_{k}, \bar{\omega}_{k})
-\] \[
-  Y_{n, k} \sim \mathcal{N}\left(\mu_{J + 1, k} \pi_{n, J + 1}, \bar{\omega}_{k}^2 \pi_{n, J + 1}^2\right)
-\]
-\end{minipage}
-\end{centering}
-
-$$
-\forall n = 1, \dots, N \quad \forall k = 1, \dots, K.
+\mu_{jk}^{(x)}
+=
+x_{jk}
++
+\frac{s_{jk}}{\sqrt{m_{jk}}}
+\zeta_{jk},
 $$
 
-It is important to note here that in considering an additional unsampled source, $\sum_{j=1}^{J + 1}\pi_j = 1$.
+$$
+\zeta_{jk}\sim\mathcal{N}(0,1),
+$$
+
+where $m_{jk}$ is the corresponding user-input source sample size. Equivalently, the implied prior for the mean signature is centred on $x_{jk}$ with standard deviation $s_{jk}/\sqrt{m_{jk}}$. This option propagates uncertainty about the sampled-source mean itself. By contrast, fixing $\mu_{jk}^{(x)}=x_{jk}$ treats the empirical source mean as known. In both cases, the supplied source standard deviation $s_{jk}$ remains in $\sigma_{nk}^{2}$ and therefore contributes to the propagated process component of the tracer likelihood. The distinction between the two choices is consequently whether uncertainty in the mean source signature is estimated, rather than whether source variation is present or absent from the model.
+
+\noindent \underline{\textit{Estimating a pooled unsampled source tracer signature}}
+
+Researchers may not know the full suite of sources contributing to a mixture and, because of logistical or resource constraints, may collect tracer data for only a subset of plausible sources that can be effectively sampled in ways that capture a reasonable spectrum of their tracer signature variation for the region of interest. A mixture may, therefore, contain contributions from one or more sources for which no source-specific tracer measurements are available (Fig. \ref{fig-1}a--b). MixMustR represents these contributions as one pooled unsampled-source component. The pooled component estimates their combined proportional contribution but does not estimate how many missing sources are present. Inferring the number of sources from mixture data is itself a difficult statistical problem [@robert1999; @neubauer2013].
+
+Other mixing modelling packages offer alternative ways to indicate the potential presence of unsampled sources in the mixture. For example, in MixSIAR the influence of an unobserved source may be captured indirectly through a multiplicative error term, represented by parameter $\xi$ in Stock et al. [@stock2018]. MixMustR does not include that parametrisation. Instead, the pooled unsampled source has an explicit proportion $\pi_{n,J+1}$ and an explicit mean tracer-signature vector, which can be either be fixed or estimated (Fig. \ref{fig-1}d).
+
+When the pooled unsampled-source signature is fixed, its standardised value for each tracer is the arithmetic mean of the observed sampled-source means:
+
+$$
+\mu_{J+1,k}^{(x)}
+=
+\bar{x}_k
+=
+\frac{1}{J}
+\sum_{j=1}^{J}x_{jk}.
+$$
+
+This option enforces strong regularisation because it assumes that, for each tracer, the pooled unsampled source lies at the centre of the sampled-source means. It can nevertheless be useful when the tracer data provide insufficient information to identify both the unsampled contribution and a freely varying unsampled signature.
+
+When the pooled unsampled-source signature is estimated, its $K$ tracer values are estimated jointly using a covariance-informed, non-centred prior:
+
+$$
+\symbf{\mu}_{J+1}
+=
+\bar{\mathbf{x}}_{u}
++
+\tau_u\mathbf{L}_{u}\mathbf{z}_{u},
+$$
+
+where:
+
+$$
+\mathbf{z}_{u}
+\sim
+\mathcal{N}_{K}
+\left(
+\mathbf{0},
+\mathbf{I}
+\right),
+\qquad
+\tau_u
+\sim
+\mathcal{N}^{+}(0,1).
+$$
+
+Here, $\bar{\mathbf{x}}_{u}$ and $\mathbf{L}_{u}$ are not supplied by the user but are derived automatically from the standardised sampled-source signature matrix $\mathbf{x}$. The prior centre equals the same across-source arithmetic mean used for the fixed-signature option above:
+
+$$
+\bar{\mathbf{x}}_{u}
+ =
+\left(
+\bar{x}_k,\ldots,\bar{x}_K
+\right)^\top
+$$
+
+The covariance factor $\mathbf{L}_{u}$ is the lower Cholesky factor of a ridge-regularised empirical covariance among the $J$ sampled-source signatures:
+
+$$
+\mathbf{L}_{u}\mathbf{L}_{u}^{\top}
+=
+\operatorname{Cov}(\mathbf{x})
++
+0.1^2\mathbf{I}_K,
+$$
+
+where $\operatorname{Cov}(\mathbf{x})$ is the $K\times K$ empirical covariance of the sampled-source mean signatures and the ridge constant, $0.1$ by default on the standardised tracer scale, guarantees a positive-definite matrix because $\operatorname{Cov}(\mathbf{x})$ is otherwise rank-deficient whenever $J\leq K$. Both $\bar{\mathbf{x}}_{u}$ and $\mathbf{L}_{u}$, along with the ridge constant, are generated automatically once tracer data are assembled but can be overridden manually by the user after the Stan program is built and before the model is fitted, for example to encode independent prior knowledge about the unsampled source's tracer signature. Conditional on $\tau_u$, this parametrisation implies:
+
+$$
+\symbf{\mu}_{J+1}\mid\tau_u
+\sim
+\mathcal{N}_{K}
+\left(
+\bar{\mathbf{x}}_{u},
+\tau_u^2\mathbf{L}_{u}\mathbf{L}_{u}^{\top}
+\right).
+$$
+
+The matrix $\mathbf{L}_{u}$ permits covariance-informed displacement of the pooled unsampled-source signature across tracers, while $\tau_u$ controls the overall magnitude of that displacement. The prior can therefore preserve cross-tracer covariance when such covariance is represented by $\mathbf{L}_{u}$. The model estimates the mean tracer-signature vector of the pooled component, not a separate process-variance or covariance matrix for the unknown sources. Their uncharacterised process variance is absorbed by the tracer-specific residual scale $\sigma_{y,k}$.
+
+The estimated option remains influenced by its prior centre, covariance factor, global scale, and the information available from both data streams. In particular, the second data stream helps distinguish the abundance of the pooled unsampled component from its tracer signature by independently informing $\pi_{n,J+1}$. Regardless of whether its signature is fixed or estimated, inclusion of the additional category means that:
+
+$$
+\sum_{j=1}^{J+1}\pi_{nj}=1.
+$$
 
 \noindent \underline{\textit{Incorporating group-level structure}}
 
-The final model choice MixMustR offers pertains to the possibility of imposing a group-level, hierarchical structure as part of the estimation process for $\symbf{\zeta}$ by assuming that each observation $n$ within a group $g$ emerges from a within group-mean, $\Delta_{g_{n, j}}$, and an overall residual error $\epsilon$:
+The final model choice concerns whether source proportions are estimated independently among observations or are partially pooled within user-defined groups. In both cases, the model is defined in the $J$-dimensional baseline-logit space, with the pooled unsampled source retained as the fixed reference category.
+
+For the independent variants:
 
 $$
-\zeta_{n, j} \sim \mathcal{N}(\Delta_{g_{n, j}}, \epsilon^2);
-$$
-$$
-\Delta_{g_{n, j}} \sim \mathcal{N}(0, \sigma_{\Delta_{g_j}}^2);
-$$
-$$
-\sigma_{\Delta_{g_j}} \sim \mathcal{N}^{\text{+}}(0, 1); \quad \epsilon \sim \mathcal{N}^{\text{+}}(0, 1).
-$$
-$$
-\forall n = 1, \dots, N, \quad \forall j = 1, \dots, J + 1, \quad \forall k = 1, \dots, K.
+\eta_{nj}
+=
+\beta_{0j}
++
+\sigma_{\gamma,j}\gamma_{nj},
 $$
 
-MixMustR creates the Stan code as part of the pipeline, and therefore the user can manually change the priors on $\epsilon$ and $\sigma_{\Delta_{g_j}}$ before running the model, where, $\mathcal{N}^{\text{+}}$ denotes the half-normal distribution.
+where:
+
+$$
+\gamma_{nj}\sim\mathcal{N}(0,1),
+\qquad
+\sigma_{\gamma,j}\sim\mathcal{N}^{+}(0,1),
+\qquad
+\beta_{0j}\sim\mathcal{N}(0,1.5^2).
+$$
+
+The intercept $\beta_{0j}$ describes the overall baseline log-ratio for sampled source $j$ relative to the pooled unsampled source. The source-specific standard deviation $\sigma_{\gamma,j}$ controls variation among individual observations around that baseline.
+
+For the hierarchical variants, let $g[n]$ identify the group containing observation $n$. Group-level logits are:
+
+$$
+\alpha_{gj}
+=
+\beta_{0j}
++
+\sigma_{\epsilon,j}\epsilon_{gj},
+$$
+
+and observation-level logits are:
+
+$$
+\eta_{nj}
+=
+\alpha_{g[n],j}
++
+\sigma_{\gamma,j}\gamma_{nj},
+$$
+
+where:
+
+$$
+\epsilon_{gj}\sim\mathcal{N}(0,1),
+\qquad
+\gamma_{nj}\sim\mathcal{N}(0,1),
+$$
+
+$$
+\sigma_{\epsilon,j}\sim\mathcal{N}^{+}(0,1),
+\qquad
+\sigma_{\gamma,j}\sim\mathcal{N}^{+}(0,1),
+\qquad
+\beta_{0j}\sim\mathcal{N}(0,1.5^2).
+$$
+
+The hierarchical structure allows observations in the same group to share information through $\alpha_{gj}$ while retaining observation-level variation. Partial pooling occurs separately for each of the $J$ sampled-source logits relative to the pooled unsampled reference. The softmax transformation then converts the complete vector of $J$ estimated logits and the zero-valued reference logit to $J+1$ source proportions. MixMustR creates the corresponding Stan program as part of its modelling pipeline, with $\mathcal{N}^{+}$ denoting a half-normal distribution.
+
+\noindent \underline{\textit{Relationship to MixSIAR}}
+
+Several elements of the MixMustR parametrisation mirror structures used in the widely-adopted MixSIAR [@stock2018]. MixSIAR represents the overall source composition with a Dirichlet-distributed global proportion vector transformed to isometric log-ratio (ILR) coordinates, then adds region- and individual-level random-effect deviations in that unconstrained space before back-transforming to the simplex; MixMustR's baseline-logit intercepts $\beta_{0j}$, group-level deviations $\alpha_{gj}$, and observation-level deviations $\gamma_{nj}$ play the analogous roles in the hierarchical variants, differing mainly in the choice of log-ratio system (baseline-logit rather than ILR) and prior family (logit-normal rather than Dirichlet). MixSIAR's tracer variance is likewise partitioned into a source-weighted process component and a residual term; MixMustR's $\sigma_{nk}^{2}=\sigma_{y,k}^{2}+\sum_{j=1}^{J}\pi_{nj}^{2}s_{jk}^{2}$ uses the same squared-proportion weighting for the source-process component, though its residual term enters additively rather than as a multiplicative scalar on process variance, as in MixSIAR's residual-times-process error structure. MixMustR does not currently implement MixSIAR's trophic-discrimination (fractionation) offsets or concentration-dependence, and represents an unsampled contribution explicitly rather than through MixSIAR's multiplicative residual-error term (see above).
+
+\noindent \underline{\textit{A note on prior choice}}
+
+All parameter priors described above are the default behaviour in MixMustR. However, users have the ability to pre-build the Stan code and customise it before fitting the model. An online vignette provides guidance on how to customise the default Stan code ([https://github.com/open-AIMS/MixMustR](https://github.com/open-AIMS/MixMustR)).
 
 \noindent \underline{\textit{Performance testing with synthetic data}}
 
-We tested MixMustR's performance on two synthetic datasets that mimic the tracer signatures obtained from a collection of spatially discrete marine soil samples taken across a seascape, and six potential carbon sources that have typically been explored in blue carbon studies to date [@dahl2025oneearth; @macreadie2019natcommun]. These datasets are incorporated as part of the MixMustR package, and were simulated using eight tracers: six fatty acids (24:0, 18:1w9, 18:2w6, 18:3w3, 20:4w6, 20:5w3) and two stable isotopes ($\delta$(^13^C/^12^C), $\delta$(^15^N/^14^N)). The six organic carbon sources considered (the *sampled* sources) included: mangrove, saltmarsh, macroalgae, seagrass, terrestrial grass and plankton. Tracer values (mean and standard deviation) associated with each sampled source were taken from the published literature (Table S1). A total of 79 soil sample observations were simulated, organised into an unbalanced hierarchical grouping design of seven groups that mimicked a typical sampling design of different locations within a seascape (e.g., three mangrove stands, three seagrass beds, etc.), each containing between 4 to 26 independent soil samples. Individual synthetic soil sample mixture signatures were calculated by multiplying tracer values with source-specific mixing proportions (see @fig-2 for the resulting isospace). For simplicity, within a given source, different tracers were assumed to contribute equally (i.e., with the same mixing proportion) to the respective mixture signatures.
+We evaluated the ability of MixMustR to recover known source proportions using a factorial simulation experiment based on tracer signatures representative of spatially discrete marine soil samples and potential carbon sources commonly considered in blue carbon studies [@dahl2025oneearth; @macreadie2019natcommun; @fulton2025gcb]. The larger source set comprised six sampled organic-carbon sources: mangrove, saltmarsh, macroalgae, seagrass, terrestrial grass, and SPOM (suspended particulate organic matter). The larger tracer set comprised eight tracers: six fatty acids (24:0, 18:1w9, 18:2w6, 18:3w3, 20:4w6, and 20:5w3) and the two stable isotopes $\delta(^{13}\mathrm{C}/^{12}\mathrm{C})$ and $\delta(^{15}\mathrm{N}/^{14}\mathrm{N})$. The mean and standard deviation associated with each sampled source and tracer were informed by real-world values from the published literature (supplementary Table S1). Representative rows illustrating the resulting input format supplied to MixMustR, for both the stream-1 tracer matrix and the stream-2 source-composition matrix (supplementary Tables S2 and S3).
+
+The experiment crossed all eight model variants with two tracer sets, containing either two or eight tracers; two source sets, containing either three or six sampled sources plus the pooled unsampled source; two scenarios describing the agreement between the independently generated composition streams; two choices of which stream generated the tracer observations; and 50 replicate datasets for every factorial combination. This produced $8\times2\times2\times2\times2\times50=6{,}400$ simulated datasets and corresponding model fits. Each dataset contained 100 mixture observations, arranged as 10 observations within each of 10 groups. Separate deterministic seeds controlled the generation of source proportions, stochastic tracer observations, and Stan sampling, allowing each component of the experiment to be reproduced independently.
+
+Source compositions were generated using a hierarchical logistic-normal process rather than a Dirichlet distribution, applied jointly to all source categories, including the pooled unsampled source. For simulation group $g=1,\ldots,G$, a centre was generated in unconstrained latent space:
+
+$$
+\symbf{\mu}_g
+\sim
+\mathcal{N}_{J+1}
+\left(
+\mathbf{0},
+4\mathbf{I}_{J+1}
+\right).
+$$
+
+Here, $J$ denotes the number of sampled sources, so that $J+1$ is the total number of source categories once the pooled unsampled source is included. Unlike the baseline-logit construction used for model fitting, in which the unsampled-source logit is fixed at zero as a reference category, the simulation assigns every category, including the unsampled source, its own free coordinate in this $(J+1)$-dimensional latent space. For observation $m=1,\ldots,M$ within group $g$, latent coordinates for stream $s$ were generated as:
+
+$$
+\mathbf{z}^{(s)}_{gm}
+\mid
+\symbf{\mu}_g
+\sim
+\mathcal{N}_{J+1}
+\left(
+\symbf{\mu}_g,
+\lambda_s\mathbf{I}_{J+1}
+\right),
+$$
+
+and transformed to source proportions using:
+
+$$
+\symbf{\pi}^{(s)}_{gm}
+=
+\operatorname{softmax}
+\left(
+\mathbf{z}^{(s)}_{gm}
+\right).
+$$
+
+In the smaller source treatment, the complete composition contained three sampled sources plus the pooled unsampled source. In the larger source treatment, the composition contained six sampled sources plus the pooled unsampled source. The unsampled component was therefore generated jointly as an explicit component of the simplex.
+
+For model input, the explicit unsampled-source column was removed from the sampled-source matrix and reconstructed exactly as:
+
+$$
+\pi_{gm,\mathrm{unsampled}}
+=
+1-
+\sum_{j\in\mathrm{sampled}}
+\pi_{gmj}.
+$$
+
+This step mimics the practical situation in which data are supplied for characterised sources and the remaining compositional mass is assigned to the pooled unsampled category.
+
+Two composition matrices were generated using the same group structure and proportion-generation seed but different within-group variances in latent Gaussian space. Stream 1 used $\lambda_1=0.5$ in all simulations. In the convergent scenario, stream 2 used $\lambda_2=1$, whereas in the divergent scenario it used $\lambda_2=0.001$. Because these quantities define covariance matrices, they are variances rather than standard deviations. The variance parameter controls within-group dispersion in latent space and is not itself a direct measure of distance between the two data streams. Finally, the terms "convergent" and "divergent" qualitatively describe the resulting degree of agreement between the two generated composition matrices (see example in Fig. \ref{fig-2}).
 
 ```{r}
 #| label: fig-2
-#| fig-cap: "Synthetic dataset of sediment cores and their simulated source composition. a) Each line represents an observation in the dataset and belongs to a group (e.g., a site), with groups depicted on the left-hand column as symbols. Each colour represents a sampled source, and the length of each colour depicts the mixing proportion of each source. The contributions of the sampled sources do not sum to one, i.e., we deliberately simulated a dataset with *unsampled* sources in every observation. b) The isospace of sediment cores (each point and symbol matches a line in a), and the mean (+/- S.D.) isotopic signature of each sampled source. Groups are treated as hierarchical effects in MixMustR."
+#| fig-cap: "Relationship between the two source-composition streams for one illustrative instance among the 6,400 simulated datasets used to evaluate MixMustR. Stream-1 source proportions, associated with the tracer-generating system and used as the common recovery benchmark, are shown on the x axis; independently generated stream-2 proportions, representing compositional or abundance data, are shown on the y axis. The complete experiment included convergent and divergent scenarios generated by changing the within-group variance of stream 2 in latent Gaussian space. The plotted example is intended to visualise inter-stream agreement for a single dataset rather than summarise the complete factorial experiment. The simulation pipeline is available as part of the MixMustR package on GitHub https://github.com/open-AIMS/MixMustR_paper"
+#| include: true
+#| echo: false
+#| eval: true
+#| fig-width: 7
+#| fig-height: 7
+fig_2
+```
+
+For every simulated dataset, two source-composition matrices represented the latent compositions associated with data streams 1 and 2. A separate indicator selected whether stream 1 or stream 2 provided the proportions used to generate the tracer observations. Let $\symbf{\pi}^{(q)}_n$ denote the selected generating composition for truth stream $q$. The expected tracer value was generated from the complete weighted source mean:
+
+$$
+\mu_{nk}^{\mathrm{sim}}
+=
+\sum_{j=1}^{J+1}
+\pi^{(q)}_{nj}\mu^{\mathrm{sim}}_{jk},
+$$
+
+where $\mu^{\mathrm{sim}}_{jk}$ was a single stochastic perturbation of the corresponding sampled- or unsampled-source tracer signature, drawn once per simulated dataset from a truncated normal distribution centred on the empirical source mean, using a separate tracer-generation seed. Because this perturbation was drawn once per source and tracer and then held fixed across all $N$ observations, $Y_{nk}$ was a deterministic function of $\mu^{\mathrm{sim}}_{jk}$ and each observation's own mixing proportions $\pi^{(q)}_{nj}$; no additional observation-level tracer measurement error was superimposed. Variation among the simulated $Y_{nk}$ within a dataset therefore reflects only differences in mixing proportions across observations, not an independent residual-noise process. This design allowed the tracer observations either to agree with the composition used as the recovery benchmark or to be generated from the alternative stream.
+
+The simulated pooled unsampled-source tracer signature was deliberately placed outside the multivariate region occupied by the sampled-source signatures. Sampled-source signatures were first standardised, the first principal-component direction was calculated, and the pooled unsampled signature was positioned three scaled units from the sampled-source centroid along that direction. This design provides a direct test of models in which the tracer signature of a genuinely missing source differs substantially from the arithmetic mean of the characterised sources. It also creates a meaningful contrast between variants that fix the pooled signature at the sampled-source mean and variants that estimate it using the covariance-informed prior.
+
+In every fit, estimated source proportions were benchmarked against source proportions from both stream-1 (simulated and retained, otherwise unknown to the user) and stream-2 (user input) datasets. Only one of the two compositions was selected to generate the tracer observations in a given dataset and was therefore defined as the tracer-generating truth for that fit. This design provides a test of a model's ability to recover the "true" underlying composition when the two independently collected data streams lead to different source proportion estimates (see Results). The hierarchical source-composition structure and resulting tracer isospace for one simulated dataset (Fig. \ref{fig-3}) provides an intuitive example of the information supplied to MixMustR (note this is only one visual instance among the 6,400 datasets generated via the simulation experiment).
+
+```{r}
+#| label: fig-3
+#| fig-cap: "One illustrative instance among the 6,400 simulated datasets used to evaluate MixMustR. a) Each line represents one mixture observation and belongs to a group, with groups depicted by symbols in the left-hand column. Colours depict the sources, with grey indicating the pooled unsampled-source component. The length of each coloured segment represents its true (simulated) mixing proportion. Source proportions were generated jointly using a hierarchical logistic-normal process and sum to one within each observation. b) The corresponding tracer isospace for the mixture observations, where each point and symbol matches an observation in panel a, together with the mean (+/- S.D.) tracer signatures of the sources, including the pooled unsampled source. Groups are represented as hierarchical effects in the corresponding MixMustR model variants."
 #| include: true
 #| echo: false
 #| eval: true
@@ -241,80 +892,129 @@ We tested MixMustR's performance on two synthetic datasets that mimic the tracer
 #| fig-height: 4.3
 #| out-width: 100%
 #| dev: cairo_pdf
-fig_2
-```
-
-The mixing proportions were simulated in a hierarchical manner using the Dirichlet distribution. We first sampled seven group means of mixing proportions each for the six sampled sources using a generic $\symbf{\alpha}$. Then, using these group-level means as concentration parameters ($\alpha$), we generated the individual proportions within each of the seven groups, generating a 79 $\times$ 6 matrix of mixing proportions. We then added, by randomly drawing from a uniform distribution (between -0.1 and 0.1), small deviations to each proportion so that each row summed to less than one. The difference from one yielded a seventh unsampled source. Using this approach, we created two versions of synthetic datasets by varying the sampling seed and the magnitude of variation to create the unsampled source.
-
-In each dataset, two matrices were created: one for the chemical tracers (used to create the chemical signatures in data stream 1), and another for eDNA metabarcoding (as input data stream 2). In dataset 1, both mixing proportion matrices were made very similar, mimicking an idealised scenario in which information coming from eDNA metabarcoding would reliably match the deposition and mixing process of chemical tracers. In dataset 2, the mixing proportion matrices differed substantially, most likely representing a realistic diversion between the two matrices. Their respective degrees of divergence can be seen in @fig-3. The mixing proportion matrix for chemical tracers was made identical between both datasets (@fig-2 a). All mixing proportion matrices used to simulate the two datasets were retained as "point of truth" to later evaluate the model performance---the closer the estimates are to the originally simulated mixing proportions, the better the model performance. The code pipeline used to create the synthetic datasets is part of the MixMustR package and can be accessed on GitHub [https://github.com/open-AIMS/MixMustR/blob/main/R/internal_data.R](https://github.com/open-AIMS/MixMustR/blob/main/R/internal_data.R). The datasets are also provided as csv files in the online supplementary information.
-
-```{r}
-#| label: fig-3
-#| fig-cap: "Degree of divergence of both synthetic datasets available in the MixMustR R package. In each dataset, two matrices were created: one for the chemical tracers (used to create the chemical signatures in data stream 1, x axis), and another for eDNA (as input data stream 2, y axis). See the main text for a general explanation of how these datasets were created. The datasets and their source code is available on GitHub as part of the MixMustR package [https://github.com/open-AIMS/MixMustR/blob/main/R/internal_data.R](https://github.com/open-AIMS/MixMustR/blob/main/R/internal_data.R))"
-#| include: true
-#| echo: false
-#| eval: true
-#| fig-width: 7
-#| fig-height: 7
 fig_3
 ```
 
-As a benchmark, we tested how one of MixMustR models performed using both the synthetic datasets explained above (eight tracers, six fatty acids plus two stable isotopes). We chose the model variant that most closely resembles the structure of a MixSIAR model with a process error (Fig \ref{fig-1} c), and allows for a hierarchical component (Fig \ref{fig-1} e). For simplicity, we chose to keep the unsampled source tracer signatures fixed based on the mean across the tracers' signatures from the sampled sources (Fig \ref{fig-1} d). Results from all model variants across both synthetic datasets are available through the online supplementary information. The eDNA metabarcoding matrix (data stream 2) was transformed to the natural log scale to yield the input $\text{ln}\rho$, though we assumed two degrees of confidence, or measurement error, in the eDNA metabarcoding information (i.e., $\sigma_{\text{ln}\rho}$ = 0.1 across all observations in synthetic dataset 1, and $\sigma_{\text{ln}\rho}$ = 1 across all observations in synthetic dataset 2). Model performances were evaluated on the basis of goodness-of-fit using the Bayesian *R^2^* [@gelman2019amstat]. The total run time (in minutes) for each of the model variants was also recorded, and can be seen in Table S2.
- 
-We also compared model estimates obtained using both MixMustR and MixSIAR [@stock2018]. We first reformatted our synthetic data (i.e., by removing the non-stable isotope tracers) to input it into MixSIAR, then ran the model after specifying the same fitting specs (code available at [https://github.com/open-aims/MixMustR_paper](https://github.com/open-aims/MixMustR_paper)), which included defining the error structure within MixSIAR (i.e., process error with multiplicative error). Although we endeavoured to make comparisons as close as possible, MixMustR and MixSIAR have fundamental differences in several respects. For example, in MixSIAR the prior can only be cast on the global mean across the group-level means. These are priors on the concentration $\alpha$ vector of the Dirichlet distribution. We provided priors for $\alpha$ by taking the mean across group means from our eDNA metabarcoding dataset, and we then scaled the priors ($alpha_j = alpha_j \times J / \sum{alpha}$) following recommended practice [@stock2018]. Other important differences between the models include the underlying MCMC algorithms for computation (JAGS used Gibbs sampling, whereas Stan uses Hamiltonian Monte Carlo with No-U-Turn Sampling (HMC with NUTS)), the error structures are different, and the estimations of an unsampled source is not available in MixSIAR.
+Each simulated dataset was fitted to one of the eight MixMustR model variants. Each fit used four Markov chains, 2,000 iterations per chain, including 1,000 warm-up iterations, an \texttt{adapt\_delta} value of 0.99, and a maximum tree depth of 15. A dedicated Stan seed was assigned to each fit. We fixed $\sigma_{\log(q),nj}=1$ for every observation–source element in all  6,400 fits. It was selected before fitting and was not tuned by scenario, replicate or truth-generating stream. On the log-proportion scale, this value permits substantial discrepancy between the supplied stream-2 proportions and the shared latent proportions. Doing so down-weights data stream 2 likelihood relative to the tracer likelihood, so that recovery of the stream-1 benchmark under each scenario tests the model's ability to draw on tracer information when data stream 2 constrains $\symbf{\pi}_n$ only weakly, rather than reflecting a value chosen post-hoc to favour any particular combination of scenario and truth-generating stream. Similarly, in divergent-stream datasets whereby data stream 2 contains the true mixture generating proportions, setting $\sigma_{\log(q),nj}$ = 1 evaluates whether the model is able to recover those proportions even under a higher level of "skepticism". Sampling diagnostics included the number of divergent transitions, maximum-tree-depth events, the Bayesian fraction of missing information, the maximum $\widehat{R}$, and the minimum effective sample size.
+
+Because either data stream could be the one that generated the tracer observations, and recovery could in principle be scored against either stream's composition, every fit was evaluated against both benchmarks, yielding four truth-stream-by-benchmark-stream combinations (Table \ref{tab:truth-benchmark-streams}).
+
+\begin{table}[htbp]
+\centering
+\caption{Combinations of truth-generating and benchmark streams used to evaluate MixMustR.}
+\label{tab:truth-benchmark-streams}
+\begin{tabular}{cccc}
+\hline
+\textbf{Truth-generating stream} &
+\textbf{Benchmark stream} &
+\textbf{Displayed in main text} &
+\textbf{Figure} \\
+\hline
+1 & 1 & Yes & Fig.~\ref{fig-4} \\
+1 & 2 & No  & Fig.~S1 \\
+2 & 1 & No  & Fig.~S2 \\
+2 & 2 & Yes & Fig.~\ref{fig-5} \\
+\hline
+\end{tabular}
+\end{table}
+
+Here we report recovery of whichever composition actually generated the tracer observations in each simulated dataset, directly addressing whether MixMustR can recover a stream-consistent truth despite the deliberately weak data stream 2 confidence described above (Figs. \ref{fig-4}--\ref{fig-5}). In the online supplementary, we report the complementary, mismatched comparison, in which recovery is instead scored against the independently generated composition that did not generate the tracer data, quantifying the cost of benchmarking against the wrong composition rather than a shortcoming of the model itself (Figs. S1-S2).
+
+Recovery of source-specific mixing proportions was evaluated by comparing posterior estimates with the relevant benchmark composition for each of the four combinations above. For source $j$, root-mean-square error was:
+
+$$
+\operatorname{RMSE}_{j}
+=
+\sqrt{
+\frac{1}{N}
+\sum_{n=1}^{N}
+\left(
+\widehat{\pi}_{nj}
+-
+\pi^{\mathrm{true}}_{nj}
+\right)^2
+},
+$$
+
+mean absolute error was:
+
+$$
+\operatorname{MAE}_{j}
+=
+\frac{1}{N}
+\sum_{n=1}^{N}
+\left|
+\widehat{\pi}_{nj}
+-
+\pi^{\mathrm{true}}_{nj}
+\right|,
+$$
+
+and mean bias was:
+
+$$
+\operatorname{Bias}_{j}
+=
+\frac{1}{N}
+\sum_{n=1}^{N}
+\left(
+\widehat{\pi}_{nj}
+-
+\pi^{\mathrm{true}}_{nj}
+\right).
+$$
+
+We additionally calculated the correlation between estimated and true source proportions. Model algorithmic diagnostics (divergent transitions, effective sample sizes, etc) can be found in the online supplementary (Figs. S3-S7). Together, the factorial design evaluates the effects of tracer dimensionality, number of sampled sources, agreement between independently generated data streams, the stream used to generate tracer observations, sampled-source signature estimation, pooled unsampled-source signature estimation, and hierarchical partial pooling. Because all simulated source proportions and tracer signatures were retained, performance could be evaluated directly against known generating values rather than inferred indirectly from goodness-of-fit alone.
 
 # Results and Discussion
 
-\noindent The MixMustR model recovered the original mixing proportions well in idealised Dataset 1---the one in which the underlying mixing proportions from chemical tracers (data stream 1) and eDNA metabarcoding (data stream 2) were similar (mean Bayesian *R^2^* across sources: `{r} (tbl_1[1:7, ]) |> dplyr::filter(Source != "Unsampled") |> dplyr::pull(Mean) |> range() |> paste0(collapse = "\\textendash")`), when compared to Dataset 2---the one in which mixing proportions diverge (mean Bayesian *R^2^*: `{r} (tbl_1[8:14, ]) |> dplyr::filter(Source != "Unsampled") |> dplyr::pull(Mean) |> range() |> paste0(collapse = "\\textendash")`; @tbl-1). Equally unsurprising was the fact that the estimated mixing proportions were closer to the underlying mixing proportions from data stream 2 of Dataset 1 (yellow squares in @fig-4 a, Fig S1--4). This is expected given that we assigned a high degree of confidence ($\sigma_{\text{ln}\rho}$ = 0.1) in the measurement error of the eDNA metabarcoding (data stream 2) mixing proportions. In general, all model variants performed poorly (i.e., a smaller *R^2^*) in recovering the originally simulated mixing proportion from the unsampled source in Dataset 2 (Fig S5--8). This is likely due to the divergence of the underlying mixing proportions, and the less confident measurement error of the eDNA metabarcoding mixing proportions ($\sigma_{\text{ln}\rho}$ = 1). Inspections of posterior distributions and chain mixing also indicated acceptable fitting convergence for most models (Fig S9--24), though models fit to Dataset 2 required much more fine tuning of fitting specifications, such as longer chains and shorter steps, and a few did not converge (Fig S11, S18 and S23).
+\noindent MixMustR's ability to recover the actual truth-generating source mixing proportions was robust across most model variants. The extent of this model performance depended on agreement between the two data streams, and which of the datasets (latent stream-1 proportions kept for simulation benchmarking or user-input data stream 2) was used as the benchmark. MixMustR recovered the mixing proportions that generated the tracer data quite well when those proportions come from data stream 1 (Figure \ref{fig-4}). Importantly, all models in our simulation experiment placed weak confidence in the second, compositional data stream ($\sigma_{\log(q),nj}=1$; see Methods). Benchmarked against the same stream-1-generating composition (i.e., in practice, the latent dataset), overall median RMSE was 0.053 (95% simulation interval: 0.016-0.260), median MAE was 0.034 (0.011-0.157), median magnitude of source-level mean bias was 0.013 (0.001-0.121), and median correlation between estimated and true proportions was 0.976 (0.506-0.998). Recovery again depended strongly on agreement between the two data streams: median RMSE was 0.049 (correlation 0.977) for convergent two-tracer simulations and 0.032 (0.992) for convergent eight-tracer simulations, compared with 0.083 (0.929) and 0.044 (0.985) for the corresponding divergent configurations.
 
-```{r}
-#| label: tbl-1
-#| tbl-cap: "Bayesian *R^2^* for synthetic Datasets 1 and 2 fit with MixMustR and MixSIAR. Models incorporate a hierarchical structure. Mean and 95% HDI (highest density interval, calculated from the posterior distribution). Bayesian *R^2^* were calculated using the simulated underlying mixing proportions from chemical tracers (data stream 1) as the observed data."
-#| include: true
-#| echo: false
-#| eval: true
-kableExtra::kable(tbl_1, format = "latex", booktabs = TRUE) |>
-  gsub("\\addlinespace", "", x = _, fixed = TRUE) |>
-  gsub("&  & Macroalgae", "\\addlinespace &  & Macroalgae", x = _, fixed = TRUE)
-```
+Through our simulations, we have also addressed the complementary question: whether MixMustR can recover the mixing proportions that generated the tracer data even when that generating composition is itself the second, deliberately low-confidence data stream (stream 2; Figure \ref{fig-5}). Benchmarked against the stream-2-generating composition, overall median RMSE was 0.044 (0.013-0.267), median MAE was 0.029 (0.009-0.156), median magnitude of source-level mean bias was 0.014 (0.001-0.122), and median correlation was 0.986 (0.494-0.999); by scenario, median RMSE was 0.055 (correlation 0.975) for convergent two-tracer simulations, 0.034 (0.992) for convergent eight-tracer simulations, 0.044 (0.987) for divergent two-tracer simulations, and 0.040 (0.990) for divergent eight-tracer simulations. Recovery of the stream-2-generated truth was therefore, if anything, marginally better than recovery of the stream-1-generated truth, demonstrating that setting $\sigma_{\log(q),nj}=1$ does not prevent MixMustR from recovering a stream-2-consistent truth even though the model is deliberately built to place little trust in stream 2's proportions.
 
 ```{r}
 #| label: fig-4
-#| fig-cap: "Mean posterior predictions vs. (simulated) mixing proportions across both synthetic datasets in MixMustR. Posterior predictions were obtained from the MixMustR model which estimates the uncertainty around the tracer signature, keeps the unsampled source tracer signatures fixed based on the mean across the tracers' signatures from the sampled sources, and allows for a hierarchical component (see Fig \\ref{fig-1} c--d). Colours and shapes represent the different data streams, and the dashed diagonal line represents the 1-to-1 reference: the closer the points are to the 1-to-1 line, the better the model fit."
+#| fig-cap: "\\textbf{MixMustR simulation performance benchmarked against stream-1 source proportions.} \\textbf{a)} Global performance summary restricted to simulations in which stream 1 generated the tracer observations. Tiles show median source-level RMSE, MAE, signed bias and correlation across repeated simulations, model variants and sources. \\textbf{b)} Focused RMSE examples benchmarked against stream 1 but comparing both truth-generating streams. Points and error bars show mean $\\pm$ SD for selected model variants, sources, stream-agreement scenarios, tracer sets and sampled-source sets. In \\textbf{B)}: Best = lowest overall median RMSE; Hardest = highest overall median RMSE."
 #| include: true
 #| echo: false
 #| eval: true
-#| fig-width: 12
-#| fig-height: 7
+#| fig-width: 14.5
+#| fig-height: 8.5
+#| out-width: 100%
+#| dev: cairo_pdf
 fig_4
 ```
 
-\noindent \underline{\textit{Comparison against MixSIAR}}
-
-In terms of recovering the original mixing proportions from the sampled sources, there was a visible difference in estimates obtained by MixSIAR (@fig-5, @tbl-1) when compared to MixMustR (@fig-4, @tbl-1). Even in our analysis of Dataset 2, in which the underlying mixing proportions between data streams diverged, and the measurement error of data stream 2 was high, the overall performance (judging by R^2^ values) of MixMustR was still higher. That said, MixSIAR potentially captured the existence of at least one unsampled source judging by the posterior distribution of the multiplicative error term (parameter $\xi$ in ref. [@stock2018]), which included values much larger than 1, though with a high degree of uncertainty (mean = 0.93, 95% HDI: 0.35--2.00).
-
 ```{r}
 #| label: fig-5
-#| fig-cap: "Mean posterior predictions vs. (simulated) mixing proportions in MixSIAR. This was fit to data stream 1 from Dataset 1, only using stable isotope tracers. The MixSIAR model included a hierarchical effect and a process error. The dashed diagonal line represents the 1-to-1 reference: the closer both estimates are to the 1-to-1 line, the better the model fit."
+#| fig-cap: "\\textbf{MixMustR simulation performance benchmarked against stream-2 source proportions.} \\textbf{a)} Global performance summary restricted to simulations in which stream 2 generated the tracer observations. Tiles show median source-level RMSE, MAE, signed bias and correlation across repeated simulations, model variants and sources. \\textbf{b)} Focused RMSE examples benchmarked against stream 2 but comparing both truth-generating streams. Points and error bars show mean $\\pm$ SD for selected model variants, sources, stream-agreement scenarios, tracer sets and sampled-source sets. In \\textbf{B)}: Best = lowest overall median RMSE; Hardest = highest overall median RMSE."
 #| include: true
 #| echo: false
 #| eval: true
-#| fig-width: 7.5
-#| fig-height: 4.9
+#| fig-width: 14.5
+#| fig-height: 8.5
+#| out-width: 100%
+#| dev: cairo_pdf
 fig_5
 ```
 
+Scoring recovery against the composition that did not generate the tracer data substantially degraded performance in both directions (supplementary Figs. S1-S2). When stream-1-generated tracer data were instead benchmarked against the independently generated stream-2 composition (supplementary Fig. S1), overall median RMSE rose to 0.071 (0.027-0.261) and median correlation fell to 0.954 (0.509-0.994); when stream-2-generated tracer data were instead benchmarked against the independently generated stream-1 composition (supplementary Fig. S2), overall median RMSE rose to 0.086 (0.031-0.272) and median correlation fell to 0.928 (0.451-0.991). This mismatch cost was most pronounced in the divergent, eight-tracer configuration, where median RMSE nearly doubled relative to the matched benchmark: from 0.044 (Fig. \ref{fig-4}) to 0.095 (supplementary Fig. S1) when stream 1 generated the tracer data, and from 0.040 (Fig. \ref{fig-5}) to 0.112 (supplementary Fig. S2) when stream 2 did. Across the present simulation design, recovery was generally better when estimates were evaluated against the composition that generated the tracer observations than when they were evaluated against the independently generated, non-generating composition. Recovery nevertheless varied among model variants, sources and simulation conditions.
+
+Recovery also depended on which of the eight model variants was fitted, with a consistent ranking across both truth streams. The variant that jointly estimated both the sampled-source and pooled unsampled-source tracer signatures with hierarchical structure (SS-H) had among the lowest median RMSE in both Fig. \ref{fig-4} (0.040, 0.012-0.112) and Fig. \ref{fig-5} (0.034, 0.009-0.108), closely matched by its non-hierarchical counterpart (SS-I: 0.039, 0.011-0.150 and 0.033, 0.010-0.155, respectively). The variant that fixed both the sampled-source and pooled unsampled-source signatures with hierarchical structure (FF-H) performed worst in both figures (0.076, 0.028-0.310 and 0.061, 0.019-0.311, respectively). This result is informative precisely because the simulated unsampled tracer signature was placed three scaled units away from the sampled-source centroid along the leading principal-component direction (see Methods); estimating that signature, rather than fixing it at a value known to be wrong, improved recovery even though it introduced additional parameters to the model.
+
+Recovery of underlying mixing proportions was also source-specific in both figures. The pooled Unsampled category was the most difficult source to recover, with overall median RMSE of 0.114 (0.035-0.348) when recovering the stream-1-generated truth (Fig. \ref{fig-4}) and 0.110 (0.029-0.354) when recovering the stream-2-generated truth (Fig. \ref{fig-5}); in both cases the Unsampled proportion tended to be underestimated (median bias -0.018 and -0.015, respectively). SPOM was the second most difficult source (median RMSE 0.081, 0.025-0.356 and 0.067, 0.020-0.363, respectively) and tended to be overestimated (median bias +0.009 and +0.008, respectively). Terrestrial grass, by contrast, had the lowest median RMSE in both figures (0.035 and 0.031, respectively). Because SPOM and Unsampled were also the sources most likely to share overlapping tracer signatures in our simulated data, this pattern is consistent with reduced identifiability among sources with similar signatures rather than a general shortcoming of any particular model variant.
+
 \noindent \underline{\textit{Assumptions and limitations of MixMustR}}
 
-The basic formulation of most mixture models assumes that tracers are conserved through the mixing process [@stock2018], and MixMustR is not different in that respect. In simulating our test datasets, we envisaged a single soil sample taken from the surface, where there is assumed to be little to no diagenesis effects. If, however, practitioners wished to include down-core samples, then fractional adjustments for shifts in isotope ratios due to diagenesis and historical changes in atmospheric carbon signatures would need to be applied [@kruger2024]. The canonical usage of $\delta$^13^C and $\delta$^15^N is ideal in many cases because isotopic signatures may be corrected with diagenesis rates prior to the model. This type of correction is currently allowed in MixSIAR, for example, through the incorporation of a discrimination factor. Future versions of MixMustR could evolve to also include that flexibility. Overall, researchers are advised to carefully choose durable chemical tracers for the mixture analysis. For example, fatty acids are often used as a suite of biomarkers indicative of diverse sources in the diet of consumers [@derrien2017waterres]. However, fresh/living samples can often have very different proportions of lipids to decayed tissue due to some compounds (e.g., PUFAs) being rapidly broken-down and undetectable in soil or water samples (e.g., refs. [@kelly2012; @erlania2024ecolind]). Protocols for identifying tracers that are robust to environmental and ecological modification may be used to improve confidence in assigning contributions of different organic sources [@neubauer2015].
+Tracer mixing models require a defensible relationship between source and mixture signatures, commonly expressed through mass balance and, where necessary, explicit correction terms for known transformations [@stock2018], and MixMustR is not different in that respect. In simulating our test datasets, we envisaged a single soil sample taken from the surface, where there is assumed to be little to no post-deposition diagenesis effects. If, however, practitioners wished to include down-core samples, then fractional adjustments for shifts in isotope ratios due to diagenesis and historical changes in atmospheric carbon signatures would need to be applied [@kruger2024]. The usage of $\delta^{13}\mathrm{C}$ and $\delta^{15}\mathrm{N}$ may be suitable when source signatures, relevant transformations and their uncertainties can be characterised at the spatial and temporal scales of the study. Future versions of MixMustR could evolve to also include that flexibility. Overall, researchers are advised to carefully choose durable chemical tracers for the mixture analysis. For example, lipid and fatty-acid profiles can provide useful source information, but their interpretation depends on compound stability and biological or environmental transformation. Lipid biomarkers vary in their resistance to degradation [@derrien2017waterres], and consumers can substantially modify dietary fatty acids, potentially obscuring source-specific markers [@kelly2012]. A combination of controlled degradation, feeding or transformation experiments (e.g., [@erlania2024ecolind]) with ordination analysis [@neubauer2015] can help identify compounds that remain informative under the conditions relevant to a given application.
 
-By allowing unknown sources to contribute to mixtures, MixMustR partially relaxes the common tenet that basic mixture models comprise all sources contributing to the mixture. Yet, it is important to recognise that this is only a strength insofar as the researcher has access to a high-quality second data stream to obtain an estimate of the "unsampled" sources that are lacking a chemical signature. We proposed information from eDNA metabarcoding could provide the second data stream but this dataset requires a carefully considered sampling and analysis pipeline to obtain an estimate of reads per amplicon sequence variant (ASV), which are then assigned to the target groups of interest (e.g., in blue carbon research those would be primary producers capable of fixing organic carbon via photosynthesis [@reef2017aslo; @ortega2020aslo; @erlania2023scitot]). These would be then classified into the sampled target source groups (i.e., the sampled sources), with all eDNA-derived ASVs that did not align with a primary producer, or could not be identified from DNA databases, might then combined into an extra unsampled group (Fig S25). Some of these unsampled ASVs may not be identifiable based on the available information in the taxonomic classifier database, and will therefore fall into a group called "unassigned". The success of this strategy depends on some key assumptions, particularly around the relative detection of different groups of interest, which is linked in some part to relative rates of shedding of decay [@beng2020biodiv]. Much more experimental work is needed to estimate these rates, and how they may affect the original mixing contribution and/or ASV-to-carbon ratios (*sensu* lipid tracers experiment [@erlania2024ecolind]). For these reasons, we simulated two different matching degrees between chemical tracers and mixing proportions as yielded from eDNA metabarcoding (see Methods for details) to test the robustness of MixMustR to tolerate some discrepancies in the proportions indicated by eDNA metabarcoding and the first data stream.
+By including one pooled unsampled component, MixMustR relaxes the closed-source assumption that all contribution must be allocated among the empirically characterised sources. This capability is informative only when data stream 2 supplies defensible sample-level compositional evidence for the characterised sources and the remaining pooled unsampled contribution. Such datasets might not automatically comprise direct measurements of biomass, diet, or material flux. For example, eDNA metabarcoding proportional reads are generated through a series of ecological, technical, and bioinformatic processes that decouple sequence reads from true source contributions---extraction, primer affinity, copy-number variation, shedding, degradation, transport and taxonomic assignment, ASV-to-carbon ratios [@lamb2019molecol; @kelly2019pcr; @brandaodias2025differential; @brasseale2025marine; @fonseca2018pitfalls; @shaffer2025observation; @pastorrollan2024current]. Similarly, particle-tracking outputs depend on the circulation model, forcing and resolution, release design, particle behaviour, simulation duration and any parameterisation of settling, decay, resuspension or active movement [@cowen2000connectivity; @paris2007surfing; @mitarai2009quantifying; @vansebille2018ocemod]. Connectivity or arrival probabilities should therefore be interpreted as material-contribution proportions only when the simulated process and normalisation are consistent with the mixture represented by data stream 1.
 
-Choosing the appropriate value for the uncertainty around data stream 2, $\sigma_{\text{ln}\rho}$, is not trivial. Therefore, the MixMustR package offers a simple tool which plots the expected variability in mixing proportion as a function of an input vector of mixing proportions from data stream 2 (one from each source), and their respective degrees of confidence or measurement error. Although the function does not inform the user what the expected uncertainty for each source and observation should be (which has to come from expert knowledge), it does allow the user to fine tune $\sigma_{\text{ln}\rho}$ until the appropriate variability in input mixing proportions is achieved. As an example, we show the expected variability in mixing proportions that would result from the values of $\sigma_{\text{ln}\rho}$ used to fit Datasets 1 and 2 (@fig-6). In determining a starting level of uncertainty to apply, researchers could use the proportion of reads among the unassigned ASVs in an eDNA metabarcoding dataset as a measure of uncertainty around the distribution in the proportion of reads per source group of interest. This is because those unassigned ASVs, which currently have no known Linnean classification or other form of TaxID using BLAST against the NCBI Taxonomy, could later be found to occupy one of the other assigned groups used to calculate estimated proportional occurrence once more becomes known about the genetic biodiversity present in a location.
+Choosing the appropriate value for the uncertainty around data stream 2, $\sigma_{\log(q),nj}$, is not trivial. We hope this particular question will be an open and fruitful avenue of research, and we strongly encourage MixMustR users to provide transparent quality assurance and quality control (QA/QC) protocols as part of their data and modelling pipelines---we provide, in the online supplementary, an illustration of eDNA processing and interpretation workflow. The MixMustR package offers a simple tool which plots the model-implied variation under alternative uncertainty settings in mixing proportion as a function of an input vector of mixing proportions from data stream 2 (one from each source), and their respective $\sigma_{\log(q),nj}$. Although the function does not inform the user what the expected uncertainty for each source and observation should be (which has to come from expert knowledge, laboratory analytical workflows, targeted experiments, etc.), it does allow the user to examine how alternative values propagate into implied variability and use this visualisation to support a transparently justified sensitivity analysis. As an example, we show the resulting variability in mixing proportions that would result from illustrative low ($\sigma_{\log(q)}=0.1 \forall n=1,\ldots,N, j=1,\ldots,J+1$) and high ($\sigma_{\log(q)}=1$, used throughout our simulations) uncertainty values (Fig. \ref{fig-6}).
 
 ```{r}
 #| label: fig-6
-#| fig-cap: "Influence of low (left) and high (right) uncertainty of data stream 2 (eDNA metabarcoding) on estimates of source contributions. The titles show the values of $\\sigma_{\\text{ln}\\rho}$ applied to Datasets 1 (left, 0.1) and 2 (right, 1) throughout our model fitting examples in this paper. For visualisation purposes, we chose an arbitrary set of mixing proportions ($\\symbf{\\pi}$) of varying magnitudes."
+#| fig-cap: "Influence of low (left) and high (right) uncertainty of data stream 2 on estimates of source contributions. The titles show illustrative values of $\\sigma_{\\log(q)}$ (left, 0.1; right, 1), with the $\\sigma_{\\log(q)} = 1$ (low confidence) representing the level used throughout our simulation experiment. For visualisation purposes, we chose an arbitrary set of mixing proportions ($\\symbf{\\pi}$) of varying magnitudes."
 #| include: true
 #| echo: false
 #| eval: true
@@ -323,14 +1023,16 @@ Choosing the appropriate value for the uncertainty around data stream 2, $\sigma
 fig_6
 ```
 
-MixMustR adds to the toolkit of ecologists and biogeochemists who may have access to multiple lines of evidence to back trace the most likely mixing proportions of their observed mixture. By evaluating MixMustR performance using a synthetic dataset of known composition we obtained insight into the underlying issues that influence estimates of source contributions to mixtures (in tune with previous work, e.g., ref. [@neubauer2015]). For example, as we observed from our results (@tbl-1, @fig-4, @fig-6), choosing the appropriate measurement error can have a large effect on model estimates and their associated uncertainty. In the idealised situation where a pipeline of data generation for data stream 2 matches the mixture process of chemical tracers in data stream 1 (similar to our synthetic Dataset 1), all MixMustR models will perform extremely well. If underlying mixing proportions do not match, then the models are likely to offer poorer performance. Thus, MixMustR offers researchers the ability to target investigations into differences in mixing proportions from data stream 1 and 2. In fact, we hope that MixMustR will spur research into innovative ways to conceive a second data stream. For example, in a blue carbon setting, alternative predictions for proportional contributions could be obtained from source-sink network models based on hydrodynamic-informed particle tracking to infer likely transport and deposition rates (e.g., ref. [@simpkins2025aslo]), or the relative proportion of probable sources from spatial habitat models of the target seascape (e.g., ref. [@asplund2021landecol]).
+MixMustR adds to the toolkit of ecologists and biogeochemists who are dealing with complex mixtures comprising a high number of potential sources and have access to multiple lines of evidence to recover the most likely mixing proportions. Its contribution is the explicit joint model in which tracer observations and an uncertain compositional evidence stream have separate likelihood terms linked by a shared latent composition. We emphasise, however, that access to a second data stream does not establish universal superiority over models that rely on tracers (data stream 1) alone. By evaluating MixMustR performance using a repeated factorial simulation of known composition we obtained insight into the underlying issues that influence estimates of source contributions to mixtures, in tune with previous work [@neubauer2015]. As shown in our results (Figs. \ref{fig-4}--\ref{fig-6}), choosing the appropriate observation uncertainty can have a large effect on model estimates and their associated uncertainty. Recovery was generally stronger in convergent scenarios than in divergent scenarios, although performance differed among model variants, source categories and tracer configurations. Recovery was relatively weaker when the composition generating the tracer data differed from the compositional benchmark used for evaluation, particularly under divergent stream scenarios. This result reflects an inferential conflict between data streams rather than simply a failure of numerical estimation. Such divergence may reflect ecologically meaningful processes such as differential transport, assimilation, degradation or temporal integration between the two data streams. We recommend that researchers vary the data stream 2 observation uncertainty, $\sigma_{\log(q),nj}$, over defensible values as a sensitivity analysis, and consider explicitly whether the two data streams are plausibly measuring the same underlying ecological quantity before combining them.
+
+We hope that MixMustR will spur research into innovative ways to conceive a second data stream. For example, in a blue carbon setting, alternative predictions for proportional contributions could be obtained from source-sink network models based on hydrodynamic-informed particle tracking to generate source-to-sink connectivity or arrival probabilities [@vansebille2018ocemod; @simpkins2025aslo], or the relative proportion of probable sources from spatial habitat models of the target seascape [@asplund2021landecol]. A related precedent for integrating an independent line of evidence into isotope-based diet reconstruction entailed reweighting posterior mixing-model output using prey-availability data, but only in proportion to the pairwise isotopic overlap between two sampled prey items, and applied this weighting post-hoc after a tracer-only model had already been fitted [@yeakel2011plosone]. MixMustR builds on this same broader idea while differing in three respects: data stream 2 is fitted jointly with the tracer likelihood rather than used to reweight an already-completed posterior; MixMustR represents uncertainty for every sample-source element through $\sigma_{\log(q),nj}$ instead of requiring pairwise isotopic-overlap weights; and the pooled unsampled-source category allows data stream 2 to represent mixture contributions for which no empirically measured tracer signature exists, rather than only disambiguating among sources that have already been sampled. Finally, MixSIAR and MixMustR have overlapping but different applications: MixSIAR includes mature functionality for trophic discrimination, concentration dependence, alternative residual and process-error structures, covariates and model comparison, whereas MixMustR presently targets a narrower two-likelihood problem with one pooled unsampled component.
 
 # Conclusion
 
-\noindent The infinite mixture issue is long standing. MixMustR builds on a series of advances in this field, and it is inspired by emerging technologies and datasets which contribute to mixture modelling solutions. In leveraging information from independent lines of evidence, MixMustR takes us one step closer to uncovering mixing proportions in organic mixtures. Getting those mixtures right has taken unprecedented importance in understanding trophic pathways and understanding ecological functions. Moreover, identifying appropriate blue carbon sources can form the basis of policy development to conserve and enhance carbon sequestration with a mind to mitigating the increasing effects of climate change.
+\noindent MixMustR builds on a series of advances in ecological mixing modelling and the emerging technologies and datasets which can contribute to mixing modelling solutions. In leveraging information from independent lines of evidence, MixMustR takes us one step closer to uncovering mixing proportions in organic mixtures. Accurately disentangling those mixture source proportions has taken unprecedented importance in understanding trophic pathways and ecological functions. Moreover, ongoing refinement of models enables adaptive management which is essential where rapidly evolving research fields can inform policy development in areas of global concern such as climate change.
 
 # Acknowledgments
 
-\noindent We recognize and pay our respects to the Traditional Owners of the lands where we conducted this research, the Whadjuk Noongar, Turrbal and Yugara peoples. Funding support was provided by the Australian Institute of Marine Science, the Queensland University of Technology and industry partner BHP.
+\noindent We recognize and pay our respects to the Traditional Owners of the lands where we conducted this research, the Whadjuk Noongar, Turrbal and Yugara peoples. Funding support was provided by the Australian Institute of Marine Science, the Queensland University of Technology and industry partner BHP. During the preparation of this manuscript and the accompanying MixMustR R package, the authors used a generative AI-based coding assistant (GitHub Copilot) to help draft and refactor R and Stan code, build the targets analysis pipeline, and support editing of the manuscript and response-to-reviewers text. All AI-assisted outputs were critically reviewed, verified, and edited by the authors, who take full responsibility for the content, accuracy, and originality of this work. No generative AI tool is credited as an author or contributor to this research.
 
 # References

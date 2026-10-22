@@ -1,0 +1,52 @@
+\usepackage[T1]{fontenc}
+\usepackage{lmodern}
+\usepackage{amssymb,amsmath}
+\usepackage{tcolorbox}
+\usepackage{unicode-math}
+\usepackage{textcomp}
+\usepackage{ifxetex,ifluatex}
+\usepackage{fixltx2e} % provides \textsubscript
+\usepackage{mathptmx}
+\usepackage{caption}
+\usepackage{lineno}
+\usepackage{booktabs}
+\usepackage{longtable}
+\usepackage{array}
+\usepackage{ragged2e}
+\linenumbers
+\def\linenumberfont{\normalfont\small\sffamily}
+
+\usepackage{fontspec}
+\usepackage{xcolor}
+
+\usepackage{titlesec}
+\defaultfontfeatures{Ligatures=TeX}
+\setsansfont{Times New Roman}
+\setmainfont{Times New Roman}
+
+% Set formats for each heading level
+\titleformat*{\section}{\fontsize{12}{14}\bfseries\sffamily}
+\titleformat*{\subsection}{\fontsize{12}{14}\bfseries\sffamily}
+\titleformat*{\subsubsection}{\itshape\fontsize{12}{14}\sffamily}
+
+\titlespacing\section{0pt}{10pt plus 4pt minus 2pt}{6pt plus 2pt minus 2pt}
+\titlespacing\subsection{0pt}{10pt plus 4pt minus 2pt}{0pt plus 2pt minus 2pt}
+\titlespacing\subsubsection{0pt}{10pt plus 4pt minus 2pt}{0pt plus 2pt minus 2pt}
+
+% Reduce space in lists
+\usepackage{enumitem}
+\setlist{nosep} % or \setlist{noitemsep} to leave space around whole list
+
+\usepackage{graphicx}
+
+\usepackage{caption}
+\captionsetup[figure]{labelfont={bf}}
+\captionsetup[table]{labelfont={bf}}
+
+\usepackage{nameref}
+\usepackage{setspace}
+\doublespacing
+
+\setlength{\parindent}{15pt}
+\setlength{\parskip}{6pt plus 2pt minus 1pt}
+\setlength{\emergencystretch}{3em}  % prevent overfull lines
